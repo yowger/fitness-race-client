@@ -1,3 +1,4 @@
+import MaterialIcons from "@react-native-vector-icons/material-icons"
 import {
     Camera,
     MapView,
@@ -6,7 +7,7 @@ import {
 } from "@maplibre/maplibre-react-native"
 import * as Location from "expo-location"
 import React, { useEffect, useRef, useState } from "react"
-import { StyleSheet, View } from "react-native"
+import { StyleSheet, TouchableOpacity, View } from "react-native"
 import { Button, Text, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 
@@ -17,14 +18,11 @@ export default function RunningTrackerScreen() {
     const [isPaused, setIsPaused] = useState(false)
     const [time, setTime] = useState(0)
     const [distance, setDistance] = useState(0)
+    const [followUser, setFollowUser] = useState(true)
     const [userLocation, setUserLocation] = useState<[number, number] | null>(
         null
     )
     const cameraRef = useRef<CameraRef | null>(null)
-    // const userCoordinates = location
-    //     ? [location.longitude, location.latitude]
-    //     : null
-    // const mapRef = useRef<MapViewRef>(null)
 
     useEffect(() => {
         ;(async () => {
@@ -88,37 +86,36 @@ export default function RunningTrackerScreen() {
                     attributionEnabled={false}
                     mapStyle={MAP_STYLE_URL}
                 >
-                    {/* <Camera
-                        ref={cameraRef}
-                        followUserLocation={true}
-                        followUserMode="normal"
-                    /> */}
-                    {/* <UserLocation
-                        coordinate={userCoordinates}
+                    <UserLocation
+                        animated={true}
+                        visible={true}
                         showsUserHeadingIndicator={true}
-                    /> */}
+                    />
 
                     <Camera
                         ref={cameraRef}
                         zoomLevel={16}
                         animationMode="flyTo"
                         animationDuration={1000}
-                        followUserLocation={false}
+                        followUserLocation={followUser}
                     />
                 </MapView>
 
-                {userLocation && (
-                    <Button
-                        mode="contained"
-                        style={styles.recenterBtn}
-                        onPress={() =>
-                            cameraRef.current?.flyTo(userLocation, 800)
+                <TouchableOpacity
+                    style={styles.recenterIcon}
+                    onPress={() => {
+                        if (userLocation && cameraRef.current) {
+                            cameraRef.current.flyTo(userLocation, 800)
+                            setFollowUser((prev) => !prev)
                         }
-                        labelStyle={{ fontSize: 12 }}
-                    >
-                        Recenter
-                    </Button>
-                )}
+                    }}
+                >
+                    <MaterialIcons
+                        name={followUser ? "directions-walk" : "my-location"}
+                        size={28}
+                        color="#007bff"
+                    />
+                </TouchableOpacity>
 
                 {isRunning && (
                     <Surface style={styles.statsCard}>
@@ -226,14 +223,13 @@ const styles = StyleSheet.create({
     pauseBtn: { flex: 1, backgroundColor: "#f0ad4e", paddingVertical: 12 },
     stopBtn: { flex: 1, backgroundColor: "#d9534f", paddingVertical: 12 },
     btnText: { fontSize: 18, fontWeight: "bold" },
-    recenterBtn: {
+    recenterIcon: {
         position: "absolute",
         bottom: 125,
         right: 20,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        backgroundColor: "#007bff",
-        zIndex: 10,
+        backgroundColor: "#fff",
+        padding: 10,
+        borderRadius: 50,
+        elevation: 5,
     },
 })
