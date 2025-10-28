@@ -25,6 +25,8 @@ export default function RunningTrackerScreen() {
     const cameraRef = useRef<CameraRef | null>(null)
 
     useEffect(() => {
+        let subscription: Location.LocationSubscription | null = null
+
         ;(async () => {
             let { status } = await Location.requestForegroundPermissionsAsync()
             if (status !== "granted") {
@@ -35,12 +37,25 @@ export default function RunningTrackerScreen() {
                 accuracy: Location.Accuracy.High,
             })
 
+            subscription = await Location.watchHeadingAsync((heading) => {
+                if (cameraRef.current && followUser) {
+                    cameraRef.current.setCamera({
+                        heading: heading.trueHeading,
+                        animationDuration: 300,
+                    })
+                }
+            })
+
             setUserLocation([
                 location.coords.longitude,
                 location.coords.latitude,
             ])
         })()
-    }, [])
+
+        return () => {
+            subscription?.remove()
+        }
+    }, [followUser])
 
     useEffect(() => {
         if (userLocation && cameraRef.current) {
