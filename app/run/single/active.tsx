@@ -12,6 +12,8 @@ import { Button, Text, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 import { MAP_STYLE_URL } from "@/config/map"
+import { formatTime, calculatePace } from "@/utils/formatters"
+import { useBackgroundTracking } from "@/hooks/useBackgroundTracking"
 
 export default function RunningTrackerScreen() {
     const [isRunning, setIsRunning] = useState(false)
@@ -25,19 +27,23 @@ export default function RunningTrackerScreen() {
     const cameraRef = useRef<CameraRef | null>(null)
 
     useEffect(() => {
-        let subscription: Location.LocationSubscription | null = null
+        let headingSub: Location.LocationSubscription | null = null
 
         ;(async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync()
-            if (status !== "granted") {
-                return
-            }
+            const { status } =
+                await Location.requestForegroundPermissionsAsync()
+            if (status !== "granted") return
 
-            let location = await Location.getCurrentPositionAsync({
+            const location = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.High,
             })
 
-            subscription = await Location.watchHeadingAsync((heading) => {
+            setUserLocation([
+                location.coords.longitude,
+                location.coords.latitude,
+            ])
+
+            headingSub = await Location.watchHeadingAsync((heading) => {
                 if (cameraRef.current && followUser) {
                     cameraRef.current.setCamera({
                         heading: heading.trueHeading,
@@ -45,16 +51,9 @@ export default function RunningTrackerScreen() {
                     })
                 }
             })
-
-            setUserLocation([
-                location.coords.longitude,
-                location.coords.latitude,
-            ])
         })()
 
-        return () => {
-            subscription?.remove()
-        }
+        return () => headingSub?.remove()
     }, [followUser])
 
     useEffect(() => {
@@ -69,29 +68,18 @@ export default function RunningTrackerScreen() {
         if (isRunning && !isPaused) {
             interval = setInterval(() => {
                 setTime((prev) => prev + 1)
-                setDistance((prev) => prev + 0.002)
             }, 1000)
         }
 
         return () => clearInterval(interval)
     }, [isRunning, isPaused])
 
-    const formatTime = (seconds: number) => {
-        const hrs = Math.floor(seconds / 3600)
-        const mins = Math.floor((seconds % 3600) / 60)
-        const secs = seconds % 60
-        return `${hrs.toString().padStart(2, "0")}:${mins
-            .toString()
-            .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
-    }
+    useBackgroundTracking(({ latitude, longitude }) => {
+        setUserLocation([longitude, latitude])
+    })
 
-    const calculatePace = () => {
-        if (distance === 0) return "0:00"
-        const paceInSeconds = time / distance
-        const mins = Math.floor(paceInSeconds / 60)
-        const secs = Math.floor(paceInSeconds % 60)
-        return `${mins}:${secs.toString().padStart(2, "0")}`
-    }
+    const formattedTime = formatTime(time)
+    const calculatedPace = calculatePace(time, distance)
 
     return (
         <SafeAreaView style={styles.container}>
@@ -101,11 +89,7 @@ export default function RunningTrackerScreen() {
                     attributionEnabled={false}
                     mapStyle={MAP_STYLE_URL}
                 >
-                    <UserLocation
-                        animated={true}
-                        visible={true}
-                        showsUserHeadingIndicator={true}
-                    />
+                    <UserLocation animated visible showsUserHeadingIndicator />
 
                     <Camera
                         ref={cameraRef}
@@ -146,7 +130,7 @@ export default function RunningTrackerScreen() {
                             <View style={styles.stat}>
                                 <Text style={styles.label}>Time</Text>
                                 <Text style={styles.value}>
-                                    {formatTime(time)}
+                                    {formattedTime}
                                 </Text>
                                 <Text style={styles.subLabel}>duration</Text>
                             </View>
@@ -154,7 +138,7 @@ export default function RunningTrackerScreen() {
                             <View style={styles.stat}>
                                 <Text style={styles.label}>Pace</Text>
                                 <Text style={styles.value}>
-                                    {calculatePace()}
+                                    {calculatedPace}
                                 </Text>
                                 <Text style={styles.subLabel}>min/km</Text>
                             </View>
