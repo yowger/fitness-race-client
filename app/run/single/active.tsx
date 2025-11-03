@@ -1,19 +1,21 @@
+import React, { useEffect, useRef, useState } from "react"
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
+import { Button, Text, Surface } from "react-native-paper"
 import MaterialIcons from "@react-native-vector-icons/material-icons"
 import {
     Camera,
-    MapView,
     CameraRef,
+    LineLayer,
+    MapView,
+    ShapeSource,
     UserLocation,
 } from "@maplibre/maplibre-react-native"
 import * as Location from "expo-location"
-import React, { useEffect, useRef, useState } from "react"
-import { StyleSheet, TouchableOpacity, View } from "react-native"
-import { Button, Text, Surface } from "react-native-paper"
-import { SafeAreaView } from "react-native-safe-area-context"
 
 import { MAP_STYLE_URL } from "@/config/map"
+import { useLocation } from "@/hooks/useLocation"
 import { formatTime, calculatePace } from "@/utils/formatters"
-import { useBackgroundTracking } from "@/hooks/useBackgroundTracking"
 
 export default function RunningTrackerScreen() {
     const [isRunning, setIsRunning] = useState(false)
@@ -21,75 +23,185 @@ export default function RunningTrackerScreen() {
     const [time, setTime] = useState(0)
     const [distance, setDistance] = useState(0)
     const [followUser, setFollowUser] = useState(true)
-    const [userLocation, setUserLocation] = useState<[number, number] | null>(
-        null
-    )
+    const [isRecentering, setIsRecentering] = useState(false)
+    const [route, setRoute] = useState<Location.LocationObjectCoords[]>([])
+    const [initialLoaded, setInitialLoaded] = useState(false)
+
+    const watchSubRef = useRef<Location.LocationSubscription | null>(null)
     const cameraRef = useRef<CameraRef | null>(null)
 
-    useEffect(() => {
-        let headingSub: Location.LocationSubscription | null = null
+    const { location, permissionStatus, requestPermission } = useLocation()
+    const userLocation = location
+        ? [location.coords.longitude, location.coords.latitude]
+        : null
 
+    // Request permission and fetch initial location on mount
+    useEffect(() => {
         ;(async () => {
-            const { status } =
-                await Location.requestForegroundPermissionsAsync()
-            if (status !== "granted") return
-
-            const location = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-            })
-
-            setUserLocation([
-                location.coords.longitude,
-                location.coords.latitude,
-            ])
-
-            headingSub = await Location.watchHeadingAsync((heading) => {
-                if (cameraRef.current && followUser) {
-                    cameraRef.current.setCamera({
-                        heading: heading.trueHeading,
-                        animationDuration: 300,
-                    })
+            if (!permissionStatus || permissionStatus.status !== "granted") {
+                const { status } = await requestPermission()
+                if (status !== "granted") {
+                    Alert.alert(
+                        "Permission Required",
+                        "We need your location to track your run."
+                    )
+                    return
                 }
+            }
+
+            const currentLocation = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Highest,
             })
+
+            if (currentLocation) {
+                const { coords } = currentLocation
+                cameraRef.current?.flyTo(
+                    [coords.longitude, coords.latitude],
+                    1000
+                )
+            }
+            setInitialLoaded(true)
         })()
+    }, [])
 
-        return () => headingSub?.remove()
-    }, [followUser])
-
+    // Timer
     useEffect(() => {
-        if (userLocation && cameraRef.current) {
-            cameraRef.current.flyTo(userLocation, 1000)
-        }
-    }, [userLocation])
-
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval>
-
-        if (isRunning && !isPaused) {
-            interval = setInterval(() => {
-                setTime((prev) => prev + 1)
-            }, 1000)
-        }
-
-        return () => clearInterval(interval)
+        if (!isRunning || isPaused) return
+        const timer = setInterval(() => setTime((t) => t + 1), 1000)
+        return () => clearInterval(timer)
     }, [isRunning, isPaused])
 
-    useBackgroundTracking(({ latitude, longitude }) => {
-        setUserLocation([longitude, latitude])
-    })
+    // Camera follow
+    useEffect(() => {
+        if (userLocation && cameraRef.current && followUser) {
+            cameraRef.current.flyTo(userLocation, 1000)
+        }
+    }, [userLocation, followUser])
+
+    // Clean up location watch on unmount
+    useEffect(() => {
+        return () => watchSubRef.current?.remove()
+    }, [])
+
+    const handleStartRun = async () => {
+        if (!initialLoaded) return // Wait for initial location load
+
+        watchSubRef.current = await Location.watchPositionAsync(
+            {
+                accuracy: Location.Accuracy.Highest,
+                timeInterval: 1000,
+                distanceInterval: 2,
+            },
+            (pos) => {
+                if (!isPaused) {
+                    setRoute((prev) => {
+                        let segmentDistance = 0
+                        if (prev.length > 0) {
+                            const last = prev[prev.length - 1]
+                            segmentDistance =
+                                getDistanceFromLatLonInMeters(
+                                    last.latitude,
+                                    last.longitude,
+                                    pos.coords.latitude,
+                                    pos.coords.longitude
+                                ) / 1000
+                            setDistance((d) => d + segmentDistance)
+                        }
+                        return [...prev, pos.coords]
+                    })
+                }
+            }
+        )
+
+        setIsRunning(true)
+        setIsPaused(false)
+    }
+
+    const handleStopRun = () => {
+        watchSubRef.current?.remove()
+        watchSubRef.current = null
+        setIsRunning(false)
+        setIsPaused(false)
+        setTime(0)
+        setDistance(0)
+        setRoute([])
+    }
+
+    const handleToggleFollow = () => {
+        if (isRecentering) return
+        setIsRecentering(true)
+        if (userLocation && cameraRef.current) {
+            cameraRef.current.flyTo(userLocation, 800)
+            setFollowUser((prev) => !prev)
+        }
+        setTimeout(() => setIsRecentering(false), 500)
+    }
 
     const formattedTime = formatTime(time)
     const calculatedPace = calculatePace(time, distance)
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.infoBox}>
+                {userLocation && (
+                    <>
+                        <Text style={styles.infoText}>
+                            Lat: {userLocation[1].toFixed(6)}
+                        </Text>
+                        <Text style={styles.infoText}>
+                            Lon: {userLocation[0].toFixed(6)}
+                        </Text>
+                    </>
+                )}
+                <Text style={styles.infoText}>
+                    Distance: {distance.toFixed(2)} km
+                </Text>
+                <Text style={styles.infoText}>Time: {formattedTime}</Text>
+                <Text style={styles.infoText}>
+                    Pace: {calculatedPace} min/km
+                </Text>
+            </View>
+
             <View style={styles.mapContainer}>
                 <MapView
                     style={styles.map}
                     attributionEnabled={false}
                     mapStyle={MAP_STYLE_URL}
                 >
-                    <UserLocation animated visible showsUserHeadingIndicator />
+                    {permissionStatus?.status === "granted" && userLocation && (
+                        <UserLocation
+                            animated
+                            visible
+                            showsUserHeadingIndicator={false}
+                        />
+                    )}
+
+                    {route.length > 1 && (
+                        <ShapeSource
+                            id="route"
+                            shape={{
+                                type: "Feature",
+                                geometry: {
+                                    type: "LineString",
+                                    coordinates: route.map((c) => [
+                                        c.longitude,
+                                        c.latitude,
+                                    ]),
+                                },
+                                properties: {},
+                            }}
+                        >
+                            <LineLayer
+                                id="routeLine"
+                                style={{
+                                    lineColor: "#007bff",
+                                    lineWidth: 4,
+                                    lineCap: "round",
+                                    lineJoin: "round",
+                                }}
+                            />
+                        </ShapeSource>
+                    )}
 
                     <Camera
                         ref={cameraRef}
@@ -102,12 +214,7 @@ export default function RunningTrackerScreen() {
 
                 <TouchableOpacity
                     style={styles.recenterIcon}
-                    onPress={() => {
-                        if (userLocation && cameraRef.current) {
-                            cameraRef.current.flyTo(userLocation, 800)
-                            setFollowUser((prev) => !prev)
-                        }
-                    }}
+                    onPress={handleToggleFollow}
                 >
                     <MaterialIcons
                         name={followUser ? "directions-walk" : "my-location"}
@@ -119,29 +226,21 @@ export default function RunningTrackerScreen() {
                 {isRunning && (
                     <Surface style={styles.statsCard}>
                         <View style={styles.statsRow}>
-                            <View style={styles.stat}>
-                                <Text style={styles.label}>Distance</Text>
-                                <Text style={styles.value}>
-                                    {distance.toFixed(2)}
-                                </Text>
-                                <Text style={styles.subLabel}>km</Text>
-                            </View>
-
-                            <View style={styles.stat}>
-                                <Text style={styles.label}>Time</Text>
-                                <Text style={styles.value}>
-                                    {formattedTime}
-                                </Text>
-                                <Text style={styles.subLabel}>duration</Text>
-                            </View>
-
-                            <View style={styles.stat}>
-                                <Text style={styles.label}>Pace</Text>
-                                <Text style={styles.value}>
-                                    {calculatedPace}
-                                </Text>
-                                <Text style={styles.subLabel}>min/km</Text>
-                            </View>
+                            <Stat
+                                label="Distance"
+                                value={distance.toFixed(2)}
+                                sub="km"
+                            />
+                            <Stat
+                                label="Time"
+                                value={formattedTime}
+                                sub="duration"
+                            />
+                            <Stat
+                                label="Pace"
+                                value={calculatedPace}
+                                sub="min/km"
+                            />
                         </View>
                     </Surface>
                 )}
@@ -151,10 +250,7 @@ export default function RunningTrackerScreen() {
                 {!isRunning ? (
                     <Button
                         mode="contained"
-                        onPress={() => {
-                            setIsRunning(true)
-                            setIsPaused(false)
-                        }}
+                        onPress={handleStartRun}
                         style={isRunning ? styles.startBtn : styles.resetBtn}
                         labelStyle={styles.btnText}
                     >
@@ -164,7 +260,7 @@ export default function RunningTrackerScreen() {
                     <View style={styles.row}>
                         <Button
                             mode="contained"
-                            onPress={() => setIsPaused(!isPaused)}
+                            onPress={() => setIsPaused((p) => !p)}
                             style={isPaused ? styles.startBtn : styles.pauseBtn}
                             labelStyle={styles.btnText}
                         >
@@ -173,12 +269,7 @@ export default function RunningTrackerScreen() {
 
                         <Button
                             mode="contained"
-                            onPress={() => {
-                                setIsRunning(false)
-                                setIsPaused(false)
-                                setTime(0)
-                                setDistance(0)
-                            }}
+                            onPress={handleStopRun}
                             style={styles.stopBtn}
                             labelStyle={styles.btnText}
                         >
@@ -191,8 +282,60 @@ export default function RunningTrackerScreen() {
     )
 }
 
+// Stat and distance function remain unchanged
+function Stat({
+    label,
+    value,
+    sub,
+}: {
+    label: string
+    value: string
+    sub: string
+}) {
+    return (
+        <View style={styles.stat}>
+            <Text style={styles.label}>{label}</Text>
+            <Text style={styles.value}>{value}</Text>
+            <Text style={styles.subLabel}>{sub}</Text>
+        </View>
+    )
+}
+
+function getDistanceFromLatLonInMeters(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+) {
+    const R = 6371000
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) ** 2
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+}
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#111" },
+    infoBox: {
+        position: "absolute",
+        top: 20,
+        left: 20,
+        right: 20,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        padding: 10,
+        borderRadius: 10,
+        zIndex: 10,
+    },
+    infoText: {
+        color: "#fff",
+        fontSize: 12,
+        marginBottom: 2,
+    },
     map: { flex: 1 },
     mapContainer: { flex: 1 },
     statsCard: {
@@ -204,18 +347,12 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 16,
     },
-    statsRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-    },
+    statsRow: { flexDirection: "row", justifyContent: "space-between" },
     stat: { alignItems: "center" },
     value: { fontSize: 28, fontWeight: "bold" },
     label: { fontSize: 14 },
     subLabel: { fontSize: 10 },
-    controls: {
-        padding: 20,
-        paddingBottom: 30,
-    },
+    controls: { padding: 20, paddingBottom: 30 },
     row: { flexDirection: "row", gap: 10 },
     resetBtn: { backgroundColor: "#28a745", paddingVertical: 12 },
     startBtn: { flex: 1, backgroundColor: "#28a745", paddingVertical: 12 },
