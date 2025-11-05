@@ -3,6 +3,7 @@ import React from "react"
 import { DefaultTheme, PaperProvider } from "react-native-paper"
 
 import { AuthProvider } from "../providers/AuthProvider"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 const theme = {
     ...DefaultTheme,
@@ -14,12 +15,16 @@ const theme = {
     },
 }
 
+const queryClient = new QueryClient()
+
 export default function RootLayout() {
     return (
-        <AuthProvider>
-            <PaperProvider theme={theme}>
-                <Stack screenOptions={{ headerShown: false }} />
-            </PaperProvider>
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+                <PaperProvider theme={theme}>
+                    <Stack screenOptions={{ headerShown: false }} />
+                </PaperProvider>
+            </AuthProvider>
+        </QueryClientProvider>
     )
 }

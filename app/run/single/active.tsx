@@ -16,6 +16,8 @@ import * as Location from "expo-location"
 import { MAP_STYLE_URL } from "@/config/map"
 import { useLocation } from "@/hooks/useLocation"
 import { formatTime, calculatePace } from "@/utils/formatters"
+import { router } from "expo-router"
+import ViewShot from "react-native-view-shot"
 
 export default function RunningTrackerScreen() {
     const [isRunning, setIsRunning] = useState(false)
@@ -26,6 +28,7 @@ export default function RunningTrackerScreen() {
     const [isRecentering, setIsRecentering] = useState(false)
     const [route, setRoute] = useState<Location.LocationObjectCoords[]>([])
     const [initialLoaded, setInitialLoaded] = useState(false)
+    const viewShotRef = useRef<View>(null)
 
     const watchSubRef = useRef<Location.LocationSubscription | null>(null)
     const cameraRef = useRef<CameraRef | null>(null)
@@ -35,7 +38,6 @@ export default function RunningTrackerScreen() {
         ? [location.coords.longitude, location.coords.latitude]
         : null
 
-    // Request permission and fetch initial location on mount
     useEffect(() => {
         ;(async () => {
             if (!permissionStatus || permissionStatus.status !== "granted") {
@@ -64,27 +66,24 @@ export default function RunningTrackerScreen() {
         })()
     }, [])
 
-    // Timer
     useEffect(() => {
         if (!isRunning || isPaused) return
         const timer = setInterval(() => setTime((t) => t + 1), 1000)
         return () => clearInterval(timer)
     }, [isRunning, isPaused])
 
-    // Camera follow
     useEffect(() => {
         if (userLocation && cameraRef.current && followUser) {
             cameraRef.current.flyTo(userLocation, 1000)
         }
     }, [userLocation, followUser])
 
-    // Clean up location watch on unmount
     useEffect(() => {
         return () => watchSubRef.current?.remove()
     }, [])
 
     const handleStartRun = async () => {
-        if (!initialLoaded) return // Wait for initial location load
+        if (!initialLoaded) return
 
         watchSubRef.current = await Location.watchPositionAsync(
             {
@@ -117,11 +116,40 @@ export default function RunningTrackerScreen() {
         setIsPaused(false)
     }
 
-    const handleStopRun = () => {
+    const handleStopRun = async () => {
         watchSubRef.current?.remove()
         watchSubRef.current = null
         setIsRunning(false)
         setIsPaused(false)
+
+        if (route.length < 3 || distance < 0.02) {
+            Alert.alert(
+                "Not Enough Data",
+                "Your run was too short to record. Try running a bit farther!"
+            )
+
+            setTime(0)
+            setDistance(0)
+            setRoute([])
+            return
+        }
+
+        const tempUri = await viewShotRef.current?.capture()
+        let savedUri = tempUri || null
+
+        const summaryData = {
+            distance,
+            time,
+            pace: calculatePace(time, distance),
+            route,
+            mapImage: savedUri,
+        }
+
+        router.push({
+            pathname: "/run/single/summary",
+            params: { summary: JSON.stringify(summaryData) },
+        })
+
         setTime(0)
         setDistance(0)
         setRoute([])
@@ -163,54 +191,61 @@ export default function RunningTrackerScreen() {
             </View>
 
             <View style={styles.mapContainer}>
-                <MapView
-                    style={styles.map}
-                    attributionEnabled={false}
-                    mapStyle={MAP_STYLE_URL}
+                <ViewShot
+                    ref={viewShotRef}
+                    style={{ flex: 1 }}
+                    options={{ format: "jpg", quality: 0.9 }}
                 >
-                    {permissionStatus?.status === "granted" && userLocation && (
-                        <UserLocation
-                            animated
-                            visible
-                            showsUserHeadingIndicator={false}
-                        />
-                    )}
+                    <MapView
+                        style={styles.map}
+                        attributionEnabled={false}
+                        mapStyle={MAP_STYLE_URL}
+                    >
+                        {permissionStatus?.status === "granted" &&
+                            userLocation && (
+                                <UserLocation
+                                    animated
+                                    visible
+                                    showsUserHeadingIndicator={false}
+                                />
+                            )}
 
-                    {route.length > 1 && (
-                        <ShapeSource
-                            id="route"
-                            shape={{
-                                type: "Feature",
-                                geometry: {
-                                    type: "LineString",
-                                    coordinates: route.map((c) => [
-                                        c.longitude,
-                                        c.latitude,
-                                    ]),
-                                },
-                                properties: {},
-                            }}
-                        >
-                            <LineLayer
-                                id="routeLine"
-                                style={{
-                                    lineColor: "#007bff",
-                                    lineWidth: 4,
-                                    lineCap: "round",
-                                    lineJoin: "round",
+                        {route.length > 1 && (
+                            <ShapeSource
+                                id="route"
+                                shape={{
+                                    type: "Feature",
+                                    geometry: {
+                                        type: "LineString",
+                                        coordinates: route.map((c) => [
+                                            c.longitude,
+                                            c.latitude,
+                                        ]),
+                                    },
+                                    properties: {},
                                 }}
-                            />
-                        </ShapeSource>
-                    )}
+                            >
+                                <LineLayer
+                                    id="routeLine"
+                                    style={{
+                                        lineColor: "#007bff",
+                                        lineWidth: 4,
+                                        lineCap: "round",
+                                        lineJoin: "round",
+                                    }}
+                                />
+                            </ShapeSource>
+                        )}
 
-                    <Camera
-                        ref={cameraRef}
-                        zoomLevel={16}
-                        animationMode="flyTo"
-                        animationDuration={1000}
-                        followUserLocation={followUser}
-                    />
-                </MapView>
+                        <Camera
+                            ref={cameraRef}
+                            zoomLevel={16}
+                            animationMode="flyTo"
+                            animationDuration={1000}
+                            followUserLocation={followUser}
+                        />
+                    </MapView>
+                </ViewShot>
 
                 <TouchableOpacity
                     style={styles.recenterIcon}
@@ -282,10 +317,10 @@ export default function RunningTrackerScreen() {
     )
 }
 
-// Stat and distance function remain unchanged
 function Stat({
     label,
     value,
+
     sub,
 }: {
     label: string
