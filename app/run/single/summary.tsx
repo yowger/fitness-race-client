@@ -1,12 +1,27 @@
-import React from "react"
-import { StyleSheet, View, Text, ScrollView, Image } from "react-native"
+import React, { useState } from "react"
+import {
+    StyleSheet,
+    View,
+    Text,
+    ScrollView,
+    Image,
+    TextInput,
+    Alert,
+} from "react-native"
 import { useLocalSearchParams, router } from "expo-router"
 import { Button, Surface } from "react-native-paper"
-import { useReverseGeocode } from "@/app/api/geoapify"
+import { useReverseGeocode } from "@/api/geoapify"
+import { useCreateRun, useHealth } from "@/api/runs"
 
 export default function RunSummary() {
+    const { mutate: saveRun, isPending, error } = useCreateRun()
+    console.log("🚀 ~ RunSummary ~ error:", error?.message)
+
     const { summary } = useLocalSearchParams()
     const data = summary ? JSON.parse(summary as string) : null
+    const [name, setName] = useState(
+        `Run on ${new Date().toLocaleDateString()}`
+    )
 
     const start = data?.route?.[0]
     const end = data?.route?.[data?.route?.length - 1]
@@ -36,6 +51,49 @@ export default function RunSummary() {
     const endLabel =
         endAddress?.features?.[0]?.properties?.formatted || "Loading end..."
 
+    const handleSave = () => {
+        const finalName =
+            name.trim() || `Run on ${new Date().toLocaleDateString()}`
+        
+        saveRun(
+            {
+                name: finalName,
+                distance: data.distance,
+                time: data.time,
+                pace: data.pace,
+                route: data.route,
+                map_image: data.mapImage,
+                start_address: startLabel,
+                end_address: endLabel,
+            },
+            {
+                onSuccess: () => {
+                    Alert.alert("Run Saved", `"${finalName}" has been saved.`)
+                    router.push("/run/single")
+                },
+                onError: (err: any) => {
+                    console.log("🚀 ~ handleSave ~ err:", err)
+                    Alert.alert("Error saving run", err.message)
+                },
+            }
+        )
+    }
+
+    const handleDiscard = () => {
+        Alert.alert(
+            "Discard Run?",
+            "This run will be deleted and cannot be recovered.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Discard",
+                    style: "destructive",
+                    onPress: () => router.push("/run/single"),
+                },
+            ]
+        )
+    }
+
     return (
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>Run Summary</Text>
@@ -47,6 +105,14 @@ export default function RunSummary() {
                     resizeMode="cover"
                 />
             )}
+
+            <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter run name"
+                placeholderTextColor="#888"
+                style={styles.nameInput}
+            />
 
             <Surface style={styles.card}>
                 <View style={styles.statRow}>
@@ -89,13 +155,25 @@ export default function RunSummary() {
                 </View>
             </Surface>
 
-            <Button
-                mode="contained"
-                style={styles.doneBtn}
-                onPress={() => router.push("/run/single")}
-            >
-                Done
-            </Button>
+            <View style={styles.buttonRow}>
+                <Button
+                    mode="outlined"
+                    style={styles.discardBtn}
+                    textColor="#ff5252"
+                    onPress={handleDiscard}
+                >
+                    Discard
+                </Button>
+                <Button
+                    mode="contained"
+                    style={styles.saveBtn}
+                    onPress={handleSave}
+                    disabled={isPending}
+                    loading={isPending}
+                >
+                    {isPending ? "Saving..." : "Save Run"}
+                </Button>
+            </View>
         </ScrollView>
     )
 }
@@ -119,6 +197,14 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 20,
         textAlign: "center",
+    },
+    nameInput: {
+        backgroundColor: "#1c1c1c",
+        color: "#fff",
+        borderRadius: 12,
+        padding: 12,
+        fontSize: 16,
+        marginBottom: 20,
     },
     mapImage: {
         width: "100%",
@@ -174,10 +260,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginLeft: 8,
     },
-    doneBtn: {
-        marginTop: 10,
+    buttonRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 20,
+    },
+    saveBtn: {
+        flex: 1,
         backgroundColor: "#00c853",
-        paddingVertical: 10,
+        marginLeft: 10,
+    },
+    discardBtn: {
+        flex: 1,
+        borderColor: "#ff5252",
+        marginRight: 10,
     },
     center: {
         flex: 1,
