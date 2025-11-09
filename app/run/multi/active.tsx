@@ -1,8 +1,10 @@
 import {
     Camera,
     CameraRef,
+    Logger,
     MapView,
     MapViewRef,
+    MarkerView,
     PointAnnotation,
 } from "@maplibre/maplibre-react-native"
 import {
@@ -32,54 +34,75 @@ const Active = () => {
     const { session } = useAuth()
     const { roomId } = useLocalSearchParams()
     const [participants, setParticipants] = useState<Participant[]>([])
+    const [userLocation, setUserLocation] =
+        useState<Location.LocationObject | null>(null)
     const mapRef = useRef<MapViewRef>(null)
     const cameraRef = useRef<CameraRef>(null)
+
     const userId = session?.user.id
 
-    const { location, permissionStatus, requestPermission } = useLocation()
-
     const recenter = () => {
-        if (location && cameraRef.current) {
+        if (userLocation && cameraRef.current) {
             cameraRef.current.flyTo(
-                [location.coords.longitude, location.coords.latitude],
+                [userLocation.coords.longitude, userLocation.coords.latitude],
                 500
             )
             cameraRef.current.zoomTo(16, 500)
         }
     }
 
+    // subscribe to user location
     useEffect(() => {
+        let subscriber: Location.LocationSubscription | null = null
+
         ;(async () => {
-            if (!permissionStatus || permissionStatus.status !== "granted") {
-                const { status } = await requestPermission()
-                if (status !== "granted") {
-                    console.warn("Location permission not granted")
-                    return
-                }
+            const { status } =
+                await Location.requestForegroundPermissionsAsync()
+            if (status !== "granted") {
+                console.warn("Location permission not granted")
+                return
             }
 
             const loc = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Highest,
             })
 
-            if (loc && cameraRef.current) {
-  cameraRef.current.setCamera({
-    centerCoordinate: [loc.coords.longitude, loc.coords.latitude],
-    zoomLevel: 16,
-    animationDuration: 1000,
-  });
-}
+            setUserLocation(loc)
+
+            subscriber = await Location.watchPositionAsync(
+                { accuracy: Location.Accuracy.Highest, distanceInterval: 1 },
+                (locUpdate) => setUserLocation(locUpdate)
+            )
         })()
-    }, [permissionStatus])
+
+        return () => subscriber?.remove()
+    }, [])
+
+    // set camera to user location on start
+    useEffect(() => {
+        ;(async () => {
+            const loc = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Highest,
+            })
+
+            if (loc && cameraRef.current) {
+                cameraRef.current.setCamera({
+                    centerCoordinate: [
+                        loc.coords.longitude,
+                        loc.coords.latitude,
+                    ],
+                    zoomLevel: 16,
+                    animationDuration: 1000,
+                })
+            }
+        })()
+    }, [])
 
     useEffect(() => {
         const socket = getSocket()
 
-        const username = session?.user.email || "Anonymous"
-        socket.emit("joinRoom", roomId, { name: username })
-
         socket.on("roomParticipants", (users: Participant[]) => {
-            console.log("🚀 ~ Active ~ users:", users)
+            console.log("🚀 EMITTING USERS", users)
             setParticipants(users)
         })
 
@@ -102,6 +125,16 @@ const Active = () => {
         }
     }, [roomId])
 
+    useEffect(() => {
+        const socket = getSocket()
+
+        if (!session?.user) return
+
+        const username = session.user.email
+        console.log("username: ", username)
+        socket.emit("joinRoom", roomId, { name: username })
+    }, [session, roomId])
+
     return (
         <View style={styles.container}>
             <MapView
@@ -110,24 +143,36 @@ const Active = () => {
                 mapStyle={MAP_STYLE_URL}
                 ref={mapRef}
             >
+                {userLocation && (
+                    <MarkerView
+                        id="self"
+                        coordinate={[
+                            userLocation.coords.longitude,
+                            userLocation.coords.latitude,
+                        ]}
+                    >
+                        <View style={styles.selfMarker}>
+                            <Text style={styles.selfMarkerLabel}>You</Text>
+                        </View>
+                    </MarkerView>
+                )}
                 {participants
                     .filter((p) => p.id !== userId)
                     .map(
-                        (p) =>
+                        (p, i) =>
                             p.lat &&
                             p.lng && (
-                                <PointAnnotation
+                                <MarkerView
                                     key={p.id}
                                     id={p.id}
                                     coordinate={[p.lng, p.lat]}
                                 >
-                                    <View style={styles.marker}>
-                                        <View style={styles.markerDot} />
-                                        <Text style={styles.markerLabel}>
-                                            {p.name || "User"}
+                                    <View style={styles.participantMarker}>
+                                        <Text style={styles.participantLabel}>
+                                            {i + 1}
                                         </Text>
                                     </View>
-                                </PointAnnotation>
+                                </MarkerView>
                             )
                     )}
                 <Camera
@@ -233,4 +278,33 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         marginTop: 2,
     },
+
+    selfMarker: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "#4CAF50",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "#fff",
+    },
+    selfMarkerLabel: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#fff",
+        backgroundColor: "red",
+    },
+
+    participantMarker: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: "#f97316",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#fff",
+    },
+    participantLabel: { fontSize: 12, fontWeight: "700", color: "#fff" },
 })
