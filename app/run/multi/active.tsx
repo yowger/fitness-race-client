@@ -144,7 +144,7 @@ const Active = () => {
                 ref={mapRef}
             >
                 {userLocation && (
-                    <MarkerView
+                    <PointAnnotation
                         id="self"
                         coordinate={[
                             userLocation.coords.longitude,
@@ -154,15 +154,16 @@ const Active = () => {
                         <View style={styles.selfMarker}>
                             <Text style={styles.selfMarkerLabel}>You</Text>
                         </View>
-                    </MarkerView>
+                    </PointAnnotation>
                 )}
+
                 {participants
                     .filter((p) => p.id !== userId)
                     .map(
                         (p, i) =>
                             p.lat &&
                             p.lng && (
-                                <MarkerView
+                                <PointAnnotation
                                     key={p.id}
                                     id={p.id}
                                     coordinate={[p.lng, p.lat]}
@@ -172,9 +173,10 @@ const Active = () => {
                                             {i + 1}
                                         </Text>
                                     </View>
-                                </MarkerView>
+                                </PointAnnotation>
                             )
                     )}
+
                 <Camera
                     ref={cameraRef}
                     zoomLevel={16}
@@ -260,24 +262,6 @@ const styles = StyleSheet.create({
     name: { fontSize: 14, fontWeight: "500" },
     coords: { fontSize: 12, color: "#555" },
     empty: { fontStyle: "italic", color: "#666", textAlign: "center" },
-    marker: { alignItems: "center" },
-    markerDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: "#f97316",
-        borderWidth: 2,
-        borderColor: "#fff",
-    },
-    markerLabel: {
-        fontSize: 10,
-        fontWeight: "500",
-        color: "#111",
-        backgroundColor: "rgba(255,255,255,0.8)",
-        paddingHorizontal: 4,
-        borderRadius: 4,
-        marginTop: 2,
-    },
 
     selfMarker: {
         width: 32,
@@ -294,6 +278,8 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#fff",
         backgroundColor: "red",
+        paddingHorizontal: 4,
+        borderRadius: 4,
     },
 
     participantMarker: {
