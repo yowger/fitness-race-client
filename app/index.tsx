@@ -8,8 +8,8 @@ export default function Index() {
     useEffect(() => {
         if (isLoading) return
 
-        if (session) router.replace("/(tabs)/home/")
-        else router.replace("/(auth)/login/")
+        if (session) router.replace("/(tabs)/home")
+        else router.replace("/(auth)/login")
     }, [session, isLoading])
 
     return null

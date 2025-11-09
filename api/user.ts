@@ -28,7 +28,7 @@ export async function createUser(data: CreateUserInput, token?: string) {
 }
 
 export function useCreateUser() {
-    const { session, user } = useAuth()
+    const { session } = useAuth()
     const token = session?.access_token
     const queryClient = useQueryClient()
 

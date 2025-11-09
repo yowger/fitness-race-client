@@ -1,20 +1,39 @@
 import { MaterialIcons } from "@react-native-vector-icons/material-icons"
 import { useRouter } from "expo-router"
-import { Text, View, ScrollView } from "react-native"
+import { Text, View, ScrollView, Alert } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Card, Button, Surface } from "react-native-paper"
+import * as Location from "expo-location"
 
 import { styles } from "@/styles/ui"
 
 const Run = () => {
     const router = useRouter()
 
-    const handleSingleRun = () => {
-        router.push("/run/single")
+    const handleSingleRun = async () => {
+        const granted = await requestLocationPermission()
+        if (granted) router.push("/run/single")
     }
 
-    const handleMultiRun = () => {
-        router.push("/run/multi")
+    const handleMultiRun = async () => {
+        const granted = await requestLocationPermission()
+        if (granted) router.push("/run/multi")
+    }
+
+    // Permission check function
+    const requestLocationPermission = async () => {
+        const { status } = await Location.getForegroundPermissionsAsync()
+        if (status === "granted") return true
+
+        const { status: requestStatus } =
+            await Location.requestForegroundPermissionsAsync()
+        if (requestStatus === "granted") return true
+
+        Alert.alert(
+            "Location Required",
+            "We need your location to track your run. Please enable it in settings."
+        )
+        return false
     }
 
     return (

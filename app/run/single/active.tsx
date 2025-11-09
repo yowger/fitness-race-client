@@ -8,6 +8,7 @@ import {
     CameraRef,
     LineLayer,
     MapView,
+    MapViewRef,
     ShapeSource,
     UserLocation,
 } from "@maplibre/maplibre-react-native"
@@ -17,7 +18,6 @@ import { MAP_STYLE_URL } from "@/config/map"
 import { useLocation } from "@/hooks/useLocation"
 import { formatTime, calculatePace } from "@/utils/formatters"
 import { router } from "expo-router"
-import ViewShot from "react-native-view-shot"
 
 export default function RunningTrackerScreen() {
     const [isRunning, setIsRunning] = useState(false)
@@ -28,10 +28,10 @@ export default function RunningTrackerScreen() {
     const [isRecentering, setIsRecentering] = useState(false)
     const [route, setRoute] = useState<Location.LocationObjectCoords[]>([])
     const [initialLoaded, setInitialLoaded] = useState(false)
-    const viewShotRef = useRef<View>(null)
 
     const watchSubRef = useRef<Location.LocationSubscription | null>(null)
     const cameraRef = useRef<CameraRef | null>(null)
+    const mapRef = useRef<MapViewRef | null>(null)
 
     const { location, permissionStatus, requestPermission } = useLocation()
     const userLocation = location
@@ -51,20 +51,23 @@ export default function RunningTrackerScreen() {
                 }
             }
 
-            const currentLocation = await Location.getCurrentPositionAsync({
+            const loc = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Highest,
             })
 
-            if (currentLocation) {
-                const { coords } = currentLocation
-                cameraRef.current?.flyTo(
-                    [coords.longitude, coords.latitude],
-                    1000
-                )
+            if (loc && cameraRef.current) {
+                cameraRef.current.setCamera({
+                    centerCoordinate: [
+                        loc.coords.longitude,
+                        loc.coords.latitude,
+                    ],
+                    zoomLevel: 16,
+                    animationDuration: 1000,
+                })
             }
             setInitialLoaded(true)
         })()
-    }, [])
+    }, [permissionStatus])
 
     useEffect(() => {
         if (!isRunning || isPaused) return
@@ -134,8 +137,14 @@ export default function RunningTrackerScreen() {
             return
         }
 
-        const tempUri = await viewShotRef.current?.capture()
-        let savedUri = tempUri || null
+        let savedUri: string | null = null
+        if (mapRef.current) {
+            try {
+                savedUri = await mapRef.current.takeSnap(true)
+            } catch (err) {
+                console.warn("Failed to capture map snapshot", err)
+            }
+        }
 
         const summaryData = {
             distance,
@@ -191,61 +200,55 @@ export default function RunningTrackerScreen() {
             </View>
 
             <View style={styles.mapContainer}>
-                <ViewShot
-                    ref={viewShotRef}
-                    style={{ flex: 1 }}
-                    options={{ format: "jpg", quality: 0.9 }}
+                <MapView
+                    ref={mapRef}
+                    style={styles.map}
+                    attributionEnabled={false}
+                    mapStyle={MAP_STYLE_URL}
                 >
-                    <MapView
-                        style={styles.map}
-                        attributionEnabled={false}
-                        mapStyle={MAP_STYLE_URL}
-                    >
-                        {permissionStatus?.status === "granted" &&
-                            userLocation && (
-                                <UserLocation
-                                    animated
-                                    visible
-                                    showsUserHeadingIndicator={false}
-                                />
-                            )}
-
-                        {route.length > 1 && (
-                            <ShapeSource
-                                id="route"
-                                shape={{
-                                    type: "Feature",
-                                    geometry: {
-                                        type: "LineString",
-                                        coordinates: route.map((c) => [
-                                            c.longitude,
-                                            c.latitude,
-                                        ]),
-                                    },
-                                    properties: {},
-                                }}
-                            >
-                                <LineLayer
-                                    id="routeLine"
-                                    style={{
-                                        lineColor: "#007bff",
-                                        lineWidth: 4,
-                                        lineCap: "round",
-                                        lineJoin: "round",
-                                    }}
-                                />
-                            </ShapeSource>
-                        )}
-
-                        <Camera
-                            ref={cameraRef}
-                            zoomLevel={16}
-                            animationMode="flyTo"
-                            animationDuration={1000}
-                            followUserLocation={followUser}
+                    {permissionStatus?.status === "granted" && userLocation && (
+                        <UserLocation
+                            animated
+                            visible
+                            showsUserHeadingIndicator={false}
                         />
-                    </MapView>
-                </ViewShot>
+                    )}
+
+                    {route.length > 1 && (
+                        <ShapeSource
+                            id="route"
+                            shape={{
+                                type: "Feature",
+                                geometry: {
+                                    type: "LineString",
+                                    coordinates: route.map((c) => [
+                                        c.longitude,
+                                        c.latitude,
+                                    ]),
+                                },
+                                properties: {},
+                            }}
+                        >
+                            <LineLayer
+                                id="routeLine"
+                                style={{
+                                    lineColor: "#007bff",
+                                    lineWidth: 4,
+                                    lineCap: "round",
+                                    lineJoin: "round",
+                                }}
+                            />
+                        </ShapeSource>
+                    )}
+
+                    <Camera
+                        ref={cameraRef}
+                        zoomLevel={16}
+                        animationMode="flyTo"
+                        animationDuration={1000}
+                        followUserLocation={followUser}
+                    />
+                </MapView>
 
                 <TouchableOpacity
                     style={styles.recenterIcon}

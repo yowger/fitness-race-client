@@ -15,7 +15,6 @@ import { useCreateRun, useHealth } from "@/api/runs"
 
 export default function RunSummary() {
     const { mutate: saveRun, isPending, error } = useCreateRun()
-    console.log("🚀 ~ RunSummary ~ error:", error?.message)
 
     const { summary } = useLocalSearchParams()
     const data = summary ? JSON.parse(summary as string) : null
