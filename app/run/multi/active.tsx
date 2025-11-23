@@ -1,11 +1,14 @@
 import {
     Camera,
     CameraRef,
+    CircleLayer,
+    LineLayer,
     Logger,
     MapView,
     MapViewRef,
     MarkerView,
     PointAnnotation,
+    ShapeSource,
 } from "@maplibre/maplibre-react-native"
 import {
     StyleSheet,
@@ -20,8 +23,9 @@ import * as Location from "expo-location"
 
 import { getSocket } from "@/lib/socket"
 import { MAP_STYLE_URL } from "@/config/map"
-import { useLocation } from "@/hooks/useLocation"
 import { useAuth } from "@/providers/AuthProvider"
+import { useRoute } from "@/api/race"
+import { useProfile } from "../../../api/user"
 
 type Participant = {
     id: string
@@ -30,7 +34,28 @@ type Participant = {
     name?: string
 }
 
+function haversineDistance(
+    [lng1, lat1]: [number, number],
+    [lng2, lat2]: [number, number]
+) {
+    const R = 6371000
+    const toRad = (x: number) => (x * Math.PI) / 180
+
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lng2 - lng1)
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+}
+
 const Active = () => {
+    const { data: user } = useProfile()
+
+    const { data: route } = useRoute("7a6f818a-bd09-4ef2-b6d2-2bf49111df65")
     const { session } = useAuth()
     const { roomId } = useLocalSearchParams()
     const [participants, setParticipants] = useState<Participant[]>([])
@@ -40,6 +65,10 @@ const Active = () => {
     const cameraRef = useRef<CameraRef>(null)
 
     const userId = session?.user.id
+
+    const finish = route?.geojson.features?.[0]?.geometry?.coordinates[
+        route.geojson.features[0].geometry.coordinates.length - 1
+    ] as [number, number]
 
     const recenter = () => {
         if (userLocation && cameraRef.current) {
@@ -51,7 +80,6 @@ const Active = () => {
         }
     }
 
-    // subscribe to user location
     useEffect(() => {
         let subscriber: Location.LocationSubscription | null = null
 
@@ -71,14 +99,39 @@ const Active = () => {
 
             subscriber = await Location.watchPositionAsync(
                 { accuracy: Location.Accuracy.Highest, distanceInterval: 1 },
-                (locUpdate) => setUserLocation(locUpdate)
+                (locUpdate) => {
+                    setUserLocation(locUpdate)
+
+                    const socket = getSocket()
+
+                    socket.emit("locationUpdate", {
+                        id: userId,
+                        roomId,
+                        lat: locUpdate.coords.latitude,
+                        lng: locUpdate.coords.longitude,
+                    })
+
+                    if (finish) {
+                        const userPos: [number, number] = [
+                            locUpdate.coords.longitude,
+                            locUpdate.coords.latitude,
+                        ]
+                        const distanceToFinish = haversineDistance(
+                            userPos,
+                            finish
+                        )
+
+                        if (distanceToFinish < 10) {
+                            socket.emit("finishLine", { userId, roomId })
+                        }
+                    }
+                }
             )
         })()
 
         return () => subscriber?.remove()
     }, [])
 
-    // set camera to user location on start
     useEffect(() => {
         ;(async () => {
             const loc = await Location.getCurrentPositionAsync({
@@ -102,7 +155,6 @@ const Active = () => {
         const socket = getSocket()
 
         socket.on("roomParticipants", (users: Participant[]) => {
-            console.log("🚀 EMITTING USERS", users)
             setParticipants(users)
         })
 
@@ -128,12 +180,12 @@ const Active = () => {
     useEffect(() => {
         const socket = getSocket()
 
-        if (!session?.user) return
+        if (!user || !session) return
 
-        const username = session.user.email
-        console.log("username: ", username)
-        socket.emit("joinRoom", roomId, { name: username })
-    }, [session, roomId])
+        const name = user.full_name
+
+        socket.emit("joinRoom", roomId, { name: name })
+    }, [session, roomId, user])
 
     return (
         <View style={styles.container}>
@@ -183,6 +235,83 @@ const Active = () => {
                     animationMode="flyTo"
                     animationDuration={500}
                 />
+
+                {route?.geojson.features?.[0]?.geometry?.coordinates && (
+                    <>
+                        <ShapeSource
+                            id="routeLine"
+                            shape={{
+                                type: "Feature",
+                                properties: {},
+                                geometry: {
+                                    type: "LineString",
+                                    coordinates:
+                                        route.geojson.features[0].geometry
+                                            .coordinates,
+                                },
+                            }}
+                        >
+                            <LineLayer
+                                id="routeLineLayer"
+                                style={{
+                                    lineColor: "#2563EB",
+                                    lineWidth: 4,
+                                }}
+                            />
+                        </ShapeSource>
+
+                        <ShapeSource
+                            id="routeEndpoints"
+                            shape={{
+                                type: "FeatureCollection",
+                                features: [
+                                    {
+                                        type: "Feature",
+                                        geometry: {
+                                            type: "Point",
+                                            coordinates:
+                                                route.geojson.features[0]
+                                                    .geometry.coordinates[0],
+                                        },
+                                        properties: { type: "start" },
+                                    },
+                                    {
+                                        type: "Feature",
+                                        geometry: {
+                                            type: "Point",
+                                            coordinates:
+                                                route.geojson.features[0]
+                                                    .geometry.coordinates[
+                                                    route.geojson.features[0]
+                                                        .geometry.coordinates
+                                                        .length - 1
+                                                ],
+                                        },
+                                        properties: { type: "finish" },
+                                    },
+                                ],
+                            }}
+                        >
+                            <CircleLayer
+                                id="endpointsLayer"
+                                style={{
+                                    circleRadius: 6,
+                                    circleColor: [
+                                        "match",
+                                        ["get", "type"],
+                                        "start",
+                                        "#10B981",
+                                        "finish",
+                                        "#EF4444",
+                                        "#000000",
+                                    ],
+                                    circleStrokeWidth: 2,
+                                    circleStrokeColor: "#fff",
+                                }}
+                            />
+                        </ShapeSource>
+                    </>
+                )}
             </MapView>
 
             <View style={styles.overlay}>

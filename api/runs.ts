@@ -1,22 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
+
 import { useAuth } from "@/providers/AuthProvider"
-
-// const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:4000/api"
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:4000/api"
-
-export function getRunApi(token?: string) {
-    return axios.create({
-        baseURL: `${API_URL}/runs`,
-        headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-    })
-}
+import { runApi } from "@/lib/axios"
 
 export async function fetchRuns(token?: string) {
-    const res = await getRunApi(token).get("/")
+    const res = await runApi(token).get("/")
     return res.data
 }
 
@@ -31,7 +19,7 @@ export function useRuns() {
 }
 
 export async function fetchRunById(id: string, token?: string) {
-    const res = await getRunApi(token).get(`/${id}`)
+    const res = await runApi(token).get(`/${id}`)
     return res.data
 }
 
@@ -58,7 +46,7 @@ export interface CreateRunInput {
 }
 
 export async function createRun(data: CreateRunInput, token?: string) {
-    const res = await getRunApi(token).post("/", data)
+    const res = await runApi(token).post("/", data)
     return res.data
 }
 
@@ -76,7 +64,7 @@ export function useCreateRun() {
 }
 
 export async function deleteRun(id: string, token?: string) {
-    const res = await getRunApi(token).delete(`/${id}`)
+    const res = await runApi(token).delete(`/${id}`)
     return res.data
 }
 
@@ -94,7 +82,7 @@ export function useDeleteRun() {
 }
 
 export async function fetchHealth(token?: string) {
-    const res = await getRunApi(token).get("/health")
+    const res = await runApi(token).get("/health")
     return res.data
 }
 

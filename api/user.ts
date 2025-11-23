@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useAuth } from "@/providers/AuthProvider"
 
@@ -37,5 +37,27 @@ export function useCreateUser() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["users"] })
         },
+    })
+}
+
+export type UserProfile = {
+    id: string
+    email: string
+    full_name: string
+}
+
+export async function getUserProfile(token?: string) {
+    const res = await getUserApi(token).get("/me")
+    return res.data
+}
+
+export const useProfile = () => {
+    const { session } = useAuth()
+    const token = session?.access_token
+
+    return useQuery<UserProfile>({
+        queryKey: ["profile"],
+        queryFn: () => getUserProfile(token),
+        enabled: !!token,
     })
 }
