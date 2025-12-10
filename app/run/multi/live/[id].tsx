@@ -23,6 +23,7 @@ import { MAP_STYLE_URL } from "@/config/map"
 import { useAuth } from "@/providers/AuthProvider"
 import { useRoute } from "@/api/race"
 import { useProfile } from "@/api/user"
+import { useRace } from "@/api/races"
 
 export type UserIdentity = {
     id: string
@@ -58,8 +59,12 @@ function haversineDistance(
 }
 
 const Active = () => {
+    const { id } = useLocalSearchParams<{ id: string }>()
     const { data: user } = useProfile()
-    const { data: route } = useRoute("7a6f818a-bd09-4ef2-b6d2-2bf49111df65")
+
+    const { data: race, isLoading, isError } = useRace(id!)
+    const routeId = race?.route_id
+    const { data: route } = useRoute(routeId!)
     const { session } = useAuth()
     const { roomId } = useLocalSearchParams()
     const [participants, setParticipants] = useState<RaceUser[]>([])
@@ -106,12 +111,12 @@ const Active = () => {
                     setUserLocation(locUpdate)
                     const socket = getSocket()
 
-                    socket.emit("locationUpdate", {
-                        roomId,
-                        id: user.id,
-                        lat: locUpdate.coords.latitude,
-                        lng: locUpdate.coords.longitude,
-                    })
+                    // socket.emit("locationUpdate", {
+                    //     roomId,
+                    //     id: user.id,
+                    //     lat: locUpdate.coords.latitude,
+                    //     lng: locUpdate.coords.longitude,
+                    // })
 
                     if (finish) {
                         const distanceToFinish = haversineDistance(
@@ -126,9 +131,9 @@ const Active = () => {
                             distanceToFinish
                         )
 
-                        if (distanceToFinish < 100)
-                            console.log("🚀 ~ Active ~ distanceToFinish:")
-                        socket.emit("finishLine", { roomId, id: user.id })
+                        // if (distanceToFinish < 100)
+                        //     console.log("🚀 ~ Active ~ distanceToFinish:")
+                        // socket.emit("finishLine", { roomId, id: user.id })
                     }
                 }
             )
@@ -155,60 +160,60 @@ const Active = () => {
         })()
     }, [])
 
-    useEffect(() => {
-        const socket = getSocket()
-        if (!user || !session) return
+    // useEffect(() => {
+    //     const socket = getSocket()
+    //     if (!user || !session) return
 
-        socket.emit("joinRoom", roomId, {
-            id: user.id,
-            name: user.full_name,
-            role: "racer",
-            bib: bibNumber,
-        } as UserIdentity)
+    //     socket.emit("joinRoom", roomId, {
+    //         id: user.id,
+    //         name: user.full_name,
+    //         role: "racer",
+    //         bib: bibNumber,
+    //     } as UserIdentity)
 
-        socket.on("roomParticipants", (users: RaceUser[]) =>
-            setParticipants(users)
-        )
+    //     socket.on("roomParticipants", (users: RaceUser[]) =>
+    //         setParticipants(users)
+    //     )
 
-        socket.on(
-            "locationUpdate",
-            (data: { id: string; lat: number; lng: number }) => {
-                setParticipants((prev) => {
-                    const others = prev.filter((p) => p.id !== data.id)
-                    const existing = prev.find((p) => p.id === data.id)
-                    const updated: RaceUser = existing
-                        ? {
-                              ...existing,
-                              state: {
-                                  ...existing.state,
-                                  lat: data.lat,
-                                  lng: data.lng,
-                                  lastUpdate: Date.now(),
-                              },
-                          }
-                        : ({
-                              id: data.id,
-                              name: "User",
-                              role: "racer",
-                              state: {
-                                  lat: data.lat,
-                                  lng: data.lng,
-                                  finished: false,
-                                  lastUpdate: Date.now(),
-                              },
-                          } as RaceUser)
+    //     socket.on(
+    //         "locationUpdate",
+    //         (data: { id: string; lat: number; lng: number }) => {
+    //             setParticipants((prev) => {
+    //                 const others = prev.filter((p) => p.id !== data.id)
+    //                 const existing = prev.find((p) => p.id === data.id)
+    //                 const updated: RaceUser = existing
+    //                     ? {
+    //                           ...existing,
+    //                           state: {
+    //                               ...existing.state,
+    //                               lat: data.lat,
+    //                               lng: data.lng,
+    //                               lastUpdate: Date.now(),
+    //                           },
+    //                       }
+    //                     : ({
+    //                           id: data.id,
+    //                           name: "User",
+    //                           role: "racer",
+    //                           state: {
+    //                               lat: data.lat,
+    //                               lng: data.lng,
+    //                               finished: false,
+    //                               lastUpdate: Date.now(),
+    //                           },
+    //                       } as RaceUser)
 
-                    return [...others, updated]
-                })
-            }
-        )
+    //                 return [...others, updated]
+    //             })
+    //         }
+    //     )
 
-        return () => {
-            socket.emit("leaveRoom", roomId)
-            socket.off("roomParticipants")
-            socket.off("locationUpdate")
-        }
-    }, [roomId, user, session])
+    //     return () => {
+    //         socket.emit("leaveRoom", roomId)
+    //         socket.off("roomParticipants")
+    //         socket.off("locationUpdate")
+    //     }
+    // }, [roomId, user, session])
 
     return (
         <View style={styles.container}>
@@ -274,6 +279,33 @@ const Active = () => {
                             style={{ lineColor: "#2563EB", lineWidth: 4 }}
                         />
                     </ShapeSource>
+                )}
+
+                {route?.geojson.features?.[0]?.geometry?.coordinates
+                    ?.length && (
+                    <>
+                        <PointAnnotation
+                            id="start"
+                            coordinate={
+                                route.geojson.features[0].geometry
+                                    .coordinates[0]
+                            }
+                        >
+                            <View style={styles.startMarker} />
+                        </PointAnnotation>
+
+                        <PointAnnotation
+                            id="finish"
+                            coordinate={
+                                route.geojson.features[0].geometry.coordinates[
+                                    route.geojson.features[0].geometry
+                                        .coordinates.length - 1
+                                ]
+                            }
+                        >
+                            <View style={styles.finishMarker} />
+                        </PointAnnotation>
+                    </>
                 )}
             </MapView>
 
@@ -363,4 +395,20 @@ const styles = StyleSheet.create({
         borderColor: "#fff",
     },
     participantLabel: { fontSize: 12, fontWeight: "700", color: "#fff" },
+    startMarker: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: "#28a745",
+        borderWidth: 2,
+        borderColor: "#fff",
+    },
+    finishMarker: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: "#dc3545",
+        borderWidth: 2,
+        borderColor: "#fff",
+    },
 })

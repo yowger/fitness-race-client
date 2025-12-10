@@ -8,7 +8,6 @@ import { supabase } from "../../lib/supabase"
 
 export default function Profile() {
     const { session } = useAuth()
-
     const user = session?.user
 
     const handleSignOut = async () => {
