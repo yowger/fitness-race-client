@@ -91,28 +91,6 @@ const Active = () => {
     }
 
     useEffect(() => {
-        const socket = getSocket()
-
-        if (!user || !session) return
-
-        socket.emit("joinRace", { raceId: id, userId: user.id })
-
-        socket.on("participantUpdate", (updatedParticipants: RaceUser[]) => {
-            setParticipants(updatedParticipants)
-        })
-
-        socket.on("notAllowed", () => {
-            alert("You are not allowed to join this race")
-        })
-
-        return () => {
-            socket.emit("leaveRace", { raceId: id, userId: user.id })
-            socket.off("participantUpdate")
-            socket.off("notAllowed")
-        }
-    }, [roomId, user, session])
-
-    useEffect(() => {
         let subscriber: Location.LocationSubscription | null = null
 
         ;(async () => {
@@ -133,6 +111,13 @@ const Active = () => {
                     setUserLocation(locUpdate)
                     const socket = getSocket()
 
+                    // socket.emit("locationUpdate", {
+                    //     roomId,
+                    //     id: user.id,
+                    //     lat: locUpdate.coords.latitude,
+                    //     lng: locUpdate.coords.longitude,
+                    // })
+
                     if (finish) {
                         const distanceToFinish = haversineDistance(
                             [
@@ -145,6 +130,10 @@ const Active = () => {
                             "🚀 ~ Active ~ distanceToFinish:",
                             distanceToFinish
                         )
+
+                        // if (distanceToFinish < 100)
+                        //     console.log("🚀 ~ Active ~ distanceToFinish:")
+                        // socket.emit("finishLine", { roomId, id: user.id })
                     }
                 }
             )
@@ -170,6 +159,61 @@ const Active = () => {
             }
         })()
     }, [])
+
+    // useEffect(() => {
+    //     const socket = getSocket()
+    //     if (!user || !session) return
+
+    //     socket.emit("joinRoom", roomId, {
+    //         id: user.id,
+    //         name: user.full_name,
+    //         role: "racer",
+    //         bib: bibNumber,
+    //     } as UserIdentity)
+
+    //     socket.on("roomParticipants", (users: RaceUser[]) =>
+    //         setParticipants(users)
+    //     )
+
+    //     socket.on(
+    //         "locationUpdate",
+    //         (data: { id: string; lat: number; lng: number }) => {
+    //             setParticipants((prev) => {
+    //                 const others = prev.filter((p) => p.id !== data.id)
+    //                 const existing = prev.find((p) => p.id === data.id)
+    //                 const updated: RaceUser = existing
+    //                     ? {
+    //                           ...existing,
+    //                           state: {
+    //                               ...existing.state,
+    //                               lat: data.lat,
+    //                               lng: data.lng,
+    //                               lastUpdate: Date.now(),
+    //                           },
+    //                       }
+    //                     : ({
+    //                           id: data.id,
+    //                           name: "User",
+    //                           role: "racer",
+    //                           state: {
+    //                               lat: data.lat,
+    //                               lng: data.lng,
+    //                               finished: false,
+    //                               lastUpdate: Date.now(),
+    //                           },
+    //                       } as RaceUser)
+
+    //                 return [...others, updated]
+    //             })
+    //         }
+    //     )
+
+    //     return () => {
+    //         socket.emit("leaveRoom", roomId)
+    //         socket.off("roomParticipants")
+    //         socket.off("locationUpdate")
+    //     }
+    // }, [roomId, user, session])
 
     return (
         <View style={styles.container}>
