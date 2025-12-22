@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ChatGPT-DavaoWalk">
+  <trk>
+    <name>Davao Walking Trail</name>
+    <trkseg>
+      <!-- Start: People's Park -->
+      <trkpt lat="7.0737" lon="125.6122">
+        <time>2025-11-05T00:00:00Z</time>
+      </trkpt>
+      <trkpt lat="7.0740" lon="125.6128">
+        <time>2025-11-05T00:00:15Z</time>
+      </trkpt>
+      <trkpt lat="7.0744" lon="125.6134">
+        <time>2025-11-05T00:00:30Z</time>
+      </trkpt>
+      <trkpt lat="7.0748" lon="125.6140">
+        <time>2025-11-05T00:00:45Z</time>
+      </trkpt>
+      <trkpt lat="7.0751" lon="125.6146">
+        <time>2025-11-05T00:01:00Z</time>
+      </trkpt>
+      <trkpt lat="7.0754" lon="125.6152">
+        <time>2025-11-05T00:01:15Z</time>
+      </trkpt>
+      <trkpt lat="7.0757" lon="125.6158">
+        <time>2025-11-05T00:01:30Z</time>
+      </trkpt>
+      <trkpt lat="7.0761" lon="125.6163">
+        <time>2025-11-05T00:01:45Z</time>
+      </trkpt>
+      <trkpt lat="7.0765" lon="125.6168">
+        <time>2025-11-05T00:02:00Z</time>
+      </trkpt>
+      <trkpt lat="7.0769" lon="125.6174">
+        <time>2025-11-05T00:02:15Z</time>
+      </trkpt>
+      <trkpt lat="7.0773" lon="125.6179">
+        <time>2025-11-05T00:02:30Z</time>
+      </trkpt>
+      <trkpt lat="7.0777" lon="125.6184">
+        <time>2025-11-05T00:02:45Z</time>
+      </trkpt>
+      <trkpt lat="7.0780" lon="125.6189">
+        <time>2025-11-05T00:03:00Z</time>
+      </trkpt>
+      <trkpt lat="7.0784" lon="125.6195">
+        <time>2025-11-05T00:03:15Z</time>
+      </trkpt>
+      <trkpt lat="7.0788" lon="125.6200">
+        <time>2025-11-05T00:03:30Z</time>
+      </trkpt>
+      <trkpt lat="7.0792" lon="125.6206">
+        <time>2025-11-05T00:03:45Z</time>
+      </trkpt>
+      <trkpt lat="7.0795" lon="125.6211">
+        <time>2025-11-05T00:04:00Z</time>
+      </trkpt>
+      <trkpt lat="7.0799" lon="125.6216">
+        <time>2025-11-05T00:04:15Z</time>
+      </trkpt>
+      <trkpt lat="7.0803" lon="125.6221">
+        <time>2025-11-05T00:04:30Z</time>
+      </trkpt>
+      <trkpt lat="7.0806" lon="125.6226">
+        <time>2025-11-05T00:04:45Z</time>
+      </trkpt>
+      <!-- End: Near Roxas Ave -->
+      <trkpt lat="7.0810" lon="125.6231">
+        <time>2025-11-05T00:05:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

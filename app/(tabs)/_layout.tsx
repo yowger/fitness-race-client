@@ -14,7 +14,7 @@ export default function TabsLayout() {
             }}
         >
             <Tabs.Screen
-                name="home"
+                name="home/index"
                 options={{
                     title: "Home",
                     tabBarIcon: ({ size, color }) => (
@@ -22,13 +22,14 @@ export default function TabsLayout() {
                     ),
                 }}
             />
+
             <Tabs.Screen
-                name="run"
+                name="races/index"
                 options={{
-                    title: "Run",
+                    title: "Races",
                     tabBarIcon: ({ size, color }) => (
                         <MaterialIcons
-                            name="directions-run"
+                            name="emoji-events"
                             size={size}
                             color={color}
                         />
@@ -36,20 +37,7 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
-                name="history"
-                options={{
-                    title: "History",
-                    tabBarIcon: ({ size, color }) => (
-                        <MaterialIcons
-                            name="history"
-                            size={size}
-                            color={color}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
+                name="profile/index"
                 options={{
                     title: "Profile",
                     tabBarIcon: ({ size, color }) => (

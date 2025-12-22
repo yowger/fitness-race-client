@@ -32,6 +32,16 @@ const Home = () => {
         limit: 10,
     })
 
+    const {
+        data: ongoingRaces,
+        isLoading: isLoadingOngoing,
+        isError: isErrorOngoing,
+    } = useRacesSimple({
+        status: "ongoing",
+        userId: user?.id,
+        limit: 10,
+    })
+
     if (isLoading) {
         return (
             <SafeAreaView style={styles.safe}>
@@ -54,6 +64,69 @@ const Home = () => {
 
     return (
         <SafeAreaView style={styles.safe}>
+            <View style={styles.headerRow}>
+                <Text style={styles.header}>Ongoing Races</Text>
+                <TouchableOpacity>
+                    <Text style={styles.seeMore}>See More</Text>
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
+                decelerationRate="fast"
+            >
+                {ongoingRaces && ongoingRaces.length > 0 ? (
+                    ongoingRaces.map((race) => (
+                        <TouchableOpacity
+                            key={race.id}
+                            style={styles.horizontalCard}
+                            onPress={() =>
+                                router.push({
+                                    pathname: `/run/multi/details/[id]`,
+                                    params: { id: race.id },
+                                })
+                            }
+                        >
+                            <Image
+                                source={{
+                                    uri:
+                                        race.routes?.map_url ||
+                                        "https://via.placeholder.com/400x150",
+                                }}
+                                style={styles.mapImage}
+                            />
+                            <View style={styles.cardContent}>
+                                <Text style={styles.raceName}>{race.name}</Text>
+                                <Text>
+                                    {race.routes?.distance
+                                        ? `${race.routes.distance.toFixed(
+                                              2
+                                          )} km`
+                                        : "Distance unknown"}
+                                </Text>
+                                <Text>
+                                    {new Date(
+                                        race.start_time
+                                    ).toLocaleDateString()}{" "}
+                                    {new Date(
+                                        race.start_time
+                                    ).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                    })}
+                                </Text>
+                                <Text>Status: {race.status}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    <Text>No ongoing races found.</Text>
+                )}
+            </ScrollView>
+
             <View style={styles.container}>
                 <View style={styles.headerRow}>
                     <Text style={styles.header}>Upcoming Races</Text>

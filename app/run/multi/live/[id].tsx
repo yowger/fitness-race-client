@@ -59,26 +59,18 @@ function haversineDistance(
 }
 
 const Active = () => {
-    const { id } = useLocalSearchParams<{ id: string }>()
+    const { id: raceId } = useLocalSearchParams<{ id: string }>()
     const { data: user } = useProfile()
 
-    const { data: race, isLoading, isError } = useRace(id!)
+    const { data: race, isLoading, isError } = useRace(raceId!)
     const routeId = race?.route_id
     const { data: route } = useRoute(routeId!)
     const { session } = useAuth()
-    const { roomId } = useLocalSearchParams()
     const [participants, setParticipants] = useState<RaceUser[]>([])
     const [userLocation, setUserLocation] =
         useState<Location.LocationObject | null>(null)
     const mapRef = useRef<MapViewRef>(null)
     const cameraRef = useRef<CameraRef>(null)
-    const userId = session?.user.id
-
-    const bibNumber = 101
-
-    const finish = route?.geojson.features?.[0]?.geometry?.coordinates[
-        route.geojson.features[0].geometry.coordinates.length - 1
-    ] as [number, number]
 
     const recenter = () => {
         if (userLocation && cameraRef.current) {
@@ -93,9 +85,9 @@ const Active = () => {
     useEffect(() => {
         const socket = getSocket()
 
-        if (!user || !session) return
+        if (!session || !raceId) return
 
-        socket.emit("joinRace", { raceId: id, userId: user.id })
+        socket.emit("joinRace", { raceId: raceId, userId: session?.user.id })
 
         socket.on("participantUpdate", (updatedParticipants: RaceUser[]) => {
             setParticipants(updatedParticipants)
@@ -106,11 +98,14 @@ const Active = () => {
         })
 
         return () => {
-            socket.emit("leaveRace", { raceId: id, userId: user.id })
+            socket.emit("leaveRace", {
+                raceId: raceId,
+                userId: session?.user.id,
+            })
             socket.off("participantUpdate")
             socket.off("notAllowed")
         }
-    }, [roomId, user, session])
+    }, [raceId, session])
 
     useEffect(() => {
         let subscriber: Location.LocationSubscription | null = null
@@ -128,30 +123,27 @@ const Active = () => {
             subscriber = await Location.watchPositionAsync(
                 { accuracy: Location.Accuracy.Highest, distanceInterval: 1 },
                 (locUpdate) => {
-                    if (!user) return
+                    if (!session || !raceId) return
 
                     setUserLocation(locUpdate)
                     const socket = getSocket()
 
-                    if (finish) {
-                        const distanceToFinish = haversineDistance(
-                            [
-                                locUpdate.coords.longitude,
-                                locUpdate.coords.latitude,
-                            ],
-                            finish
-                        )
-                        console.log(
-                            "🚀 ~ Active ~ distanceToFinish:",
-                            distanceToFinish
-                        )
-                    }
+                    socket.emit("participantUpdate", {
+                        userId: session?.user.id,
+                        raceId: raceId,
+                        coords: [
+                            locUpdate.coords.longitude,
+                            locUpdate.coords.latitude,
+                        ],
+                        timestamp: Date.now(),
+                        speed: locUpdate.coords.speed ?? 0,
+                    })
                 }
             )
         })()
 
         return () => subscriber?.remove()
-    }, [])
+    }, [session, raceId])
 
     useEffect(() => {
         ;(async () => {
@@ -193,8 +185,8 @@ const Active = () => {
                     </PointAnnotation>
                 )}
 
-                {participants
-                    .filter((p) => p.id !== userId)
+                {/* {participants
+                    ?.filter((p) => p.id !== userId)
                     .map((p, i) => (
                         <PointAnnotation
                             key={p.id}
@@ -207,7 +199,7 @@ const Active = () => {
                                 </Text>
                             </View>
                         </PointAnnotation>
-                    ))}
+                    ))} */}
 
                 <Camera
                     ref={cameraRef}
@@ -266,7 +258,8 @@ const Active = () => {
             </MapView>
 
             <View style={styles.overlay}>
-                <Text style={styles.title}>Room: {roomId}</Text>
+                <Text style={styles.title}>UserId: {session?.user.id}</Text>
+                <Text style={styles.title}>Room: {raceId}</Text>
                 <TouchableOpacity
                     onPress={recenter}
                     style={{ marginBottom: 8 }}
@@ -368,3 +361,46 @@ const styles = StyleSheet.create({
         borderColor: "#fff",
     },
 })
+
+/*
+ useEffect(() => {
+        let subscriber: Location.LocationSubscription | null = null
+
+        ;(async () => {
+            const { status } =
+                await Location.requestForegroundPermissionsAsync()
+            if (status !== "granted") return
+
+            const loc = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Highest,
+            })
+            setUserLocation(loc)
+
+            subscriber = await Location.watchPositionAsync(
+                { accuracy: Location.Accuracy.Highest, distanceInterval: 1 },
+                (locUpdate) => {
+                    if (!user) return
+
+                    setUserLocation(locUpdate)
+                    const socket = getSocket()
+
+                    if (finish) {
+                        const distanceToFinish = haversineDistance(
+                            [
+                                locUpdate.coords.longitude,
+                                locUpdate.coords.latitude,
+                            ],
+                            finish
+                        )
+                        console.log(
+                            "🚀 ~ Active ~ distanceToFinish:",
+                            distanceToFinish
+                        )
+                    }
+                }
+            )
+        })()
+
+        return () => subscriber?.remove()
+    }, [])
+*/

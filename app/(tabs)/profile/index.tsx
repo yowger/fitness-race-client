@@ -3,8 +3,8 @@ import { StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Button } from "react-native-paper"
 
-import { useAuth } from "../../providers/AuthProvider"
-import { supabase } from "../../lib/supabase"
+import { useAuth } from "../../../providers/AuthProvider"
+import { supabase } from "../../../lib/supabase"
 
 export default function Profile() {
     const { session } = useAuth()
