@@ -10,7 +10,7 @@ import {
 import React from "react"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useAuth } from "@/providers/AuthProvider"
-import { useRacesSimple } from "@/api/races"
+import { useRaces } from "@/api/races"
 import { useRouter } from "expo-router"
 
 const { width } = Dimensions.get("window")
@@ -23,26 +23,26 @@ const Home = () => {
     const router = useRouter()
 
     const {
-        data: upcomingRaces,
-        isLoading,
-        isError,
-    } = useRacesSimple({
-        status: "upcoming",
-        userId: user?.id,
-        limit: 10,
-    })
-
-    const {
-        data: ongoingRaces,
+        data: ongoingRaces = [],
         isLoading: isLoadingOngoing,
         isError: isErrorOngoing,
-    } = useRacesSimple({
+    } = useRaces({
         status: "ongoing",
         userId: user?.id,
         limit: 10,
     })
 
-    if (isLoading) {
+    const {
+        data: upcomingRaces = [],
+        isLoading: isLoadingUpcoming,
+        isError: isErrorUpcoming,
+    } = useRaces({
+        status: "upcoming",
+        userId: user?.id,
+        limit: 10,
+    })
+
+    if (isLoadingOngoing || isLoadingUpcoming) {
         return (
             <SafeAreaView style={styles.safe}>
                 <View style={styles.container}>
@@ -52,7 +52,7 @@ const Home = () => {
         )
     }
 
-    if (isError) {
+    if (isErrorOngoing || isErrorUpcoming) {
         return (
             <SafeAreaView style={styles.safe}>
                 <View style={styles.container}>
@@ -64,6 +64,7 @@ const Home = () => {
 
     return (
         <SafeAreaView style={styles.safe}>
+            {/* ===== Ongoing ===== */}
             <View style={styles.headerRow}>
                 <Text style={styles.header}>Ongoing Races</Text>
                 <TouchableOpacity>
@@ -78,7 +79,7 @@ const Home = () => {
                 snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
                 decelerationRate="fast"
             >
-                {ongoingRaces && ongoingRaces.length > 0 ? (
+                {ongoingRaces.length > 0 ? (
                     ongoingRaces.map((race) => (
                         <TouchableOpacity
                             key={race.id}
@@ -93,7 +94,7 @@ const Home = () => {
                             <Image
                                 source={{
                                     uri:
-                                        race.routes?.map_url ||
+                                        race.routes?.map_url ??
                                         "https://via.placeholder.com/400x150",
                                 }}
                                 style={styles.mapImage}
@@ -123,10 +124,13 @@ const Home = () => {
                         </TouchableOpacity>
                     ))
                 ) : (
-                    <Text>No ongoing races found.</Text>
+                    <Text style={{ paddingHorizontal: 20 }}>
+                        No ongoing races found.
+                    </Text>
                 )}
             </ScrollView>
 
+            {/* ===== Upcoming ===== */}
             <View style={styles.container}>
                 <View style={styles.headerRow}>
                     <Text style={styles.header}>Upcoming Races</Text>
@@ -142,7 +146,7 @@ const Home = () => {
                     snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
                     decelerationRate="fast"
                 >
-                    {upcomingRaces && upcomingRaces.length > 0 ? (
+                    {upcomingRaces.length > 0 ? (
                         upcomingRaces.map((race) => (
                             <TouchableOpacity
                                 key={race.id}
@@ -157,7 +161,7 @@ const Home = () => {
                                 <Image
                                     source={{
                                         uri:
-                                            race.routes?.map_url ||
+                                            race.routes?.map_url ??
                                             "https://via.placeholder.com/400x150",
                                     }}
                                     style={styles.mapImage}
@@ -167,8 +171,8 @@ const Home = () => {
                                         {race.name}
                                     </Text>
                                     <Text>
-                                        {race.routes?.distance
-                                            ? `${race.routes.distance.toFixed(
+                                        {race?.routes?.distance
+                                            ? `${race?.routes?.distance.toFixed(
                                                   2
                                               )} km`
                                             : "Distance unknown"}
@@ -189,7 +193,9 @@ const Home = () => {
                             </TouchableOpacity>
                         ))
                     ) : (
-                        <Text>No upcoming races found.</Text>
+                        <Text style={{ paddingHorizontal: 20 }}>
+                            No upcoming races found.
+                        </Text>
                     )}
                 </ScrollView>
             </View>
