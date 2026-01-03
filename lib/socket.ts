@@ -15,7 +15,10 @@ import { io, Socket } from "socket.io-client"
 
 // export const getSocket = () => socket
 
-const SERVER_URL = "http://10.0.2.2:4000"
+// testing
+// const SERVER_URL = "http://10.0.2.2:4000"
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET as string
+const SERVER_URL = SOCKET_URL
 
 let socket: Socket | null = null
 
