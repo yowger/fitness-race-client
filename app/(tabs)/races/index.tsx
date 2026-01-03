@@ -541,7 +541,7 @@ export default function RacesIndex() {
                                         </View>
 
                                         {/* CTA Button */}
-                                        <Pressable style={styles.viewButton}>
+                                        {/* <Pressable style={styles.viewButton}>
                                             <LinearGradient
                                                 colors={["#0891b2", "#16a34a"]}
                                                 start={{ x: 0, y: 0 }}
@@ -558,7 +558,7 @@ export default function RacesIndex() {
                                                     VIEW DETAILS →
                                                 </Text>
                                             </LinearGradient>
-                                        </Pressable>
+                                        </Pressable> */}
                                     </View>
                                 </View>
                             </Pressable>

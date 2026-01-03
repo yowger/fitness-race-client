@@ -534,8 +534,11 @@ export const useJoinRace = () => {
     return useMutation({
         mutationFn: (data: { race_id: string; user_id: string }) =>
             addParticipant(data, token),
-        onSuccess: (_, data) =>
-            qc.invalidateQueries({ queryKey: ["race", data.race_id] }),
+        onSuccess: (_, data) => {
+            qc.invalidateQueries({ queryKey: ["race", data.race_id] })
+            qc.invalidateQueries({ queryKey: ["race"] })
+            qc.invalidateQueries({ queryKey: ["races"] })
+        },
     })
 }
 
@@ -547,8 +550,11 @@ export const useLeaveRace = () => {
     return useMutation({
         mutationFn: (data: { race_id: string; user_id: string }) =>
             removeParticipant(data, token),
-        onSuccess: (_, data) =>
-            qc.invalidateQueries({ queryKey: ["race", data.race_id] }),
+        onSuccess: (_, data) => {
+            qc.invalidateQueries({ queryKey: ["race", data.race_id] })
+            qc.invalidateQueries({ queryKey: ["race"] })
+            qc.invalidateQueries({ queryKey: ["races"] })
+        },
     })
 }
 

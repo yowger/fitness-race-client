@@ -100,6 +100,34 @@ const Details = () => {
         ? ((race.participants?.length ?? 0) / race.max_participants) * 100
         : 0
 
+    const isJoining = joinRace.isPending
+    const isLeaving = leaveRace.isPending
+    const isMutating = isJoining || isLeaving
+
+    const canJoin =
+        !!userId && race.status === "upcoming" && !isRegistered && !isMutating
+
+    const canLeave =
+        !!userId && race.status === "upcoming" && isRegistered && !isMutating
+
+    const handleJoinLeave = () => {
+        console.log("handleJoinLeave")
+
+        if (!userId) return
+
+        if (isRegistered) {
+            leaveRace.mutate({
+                race_id: race.id,
+                user_id: userId,
+            })
+        } else {
+            joinRace.mutate({
+                race_id: race.id,
+                user_id: userId,
+            })
+        }
+    }
+
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -580,19 +608,12 @@ const Details = () => {
             {/* Bottom Action Bar */}
             <View style={styles.bottomBar}>
                 <Pressable
-                    style={styles.registerButton}
-                    onPress={() => {
-                        if (!userId) return
-                        isRegistered
-                            ? leaveRace.mutate({
-                                  race_id: race.id,
-                                  user_id: userId,
-                              })
-                            : joinRace.mutate({
-                                  race_id: race.id,
-                                  user_id: userId,
-                              })
-                    }}
+                    disabled={!canJoin && !canLeave}
+                    style={[
+                        styles.registerButton,
+                        isMutating && { opacity: 0.7 },
+                    ]}
+                    onPress={handleJoinLeave}
                 >
                     <LinearGradient
                         colors={
@@ -610,7 +631,11 @@ const Details = () => {
                                 isRegistered && styles.registeredButtonText,
                             ]}
                         >
-                            {isRegistered ? "✓ REGISTERED" : "🏃 JOIN RACE"}
+                            {isMutating
+                                ? "PLEASE WAIT..."
+                                : isRegistered
+                                ? "REGISTERED"
+                                : "JOIN RACE"}
                         </Text>
                     </LinearGradient>
                 </Pressable>
