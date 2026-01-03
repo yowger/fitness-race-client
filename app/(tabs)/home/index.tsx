@@ -183,7 +183,7 @@ const Home = () => {
                                         style={styles.raceCard}
                                         onPress={() =>
                                             router.push({
-                                                pathname: `/run/multi/details/[id]`,
+                                                pathname: `/run/multi/live/[id]`,
                                                 params: { id: race.id },
                                             })
                                         }
@@ -425,7 +425,7 @@ const Home = () => {
                                             style={styles.raceCard}
                                             onPress={() =>
                                                 router.push({
-                                                    pathname: `/run/multi/details/[id]`,
+                                                    pathname: `/race/details`,
                                                     params: { id: race.id },
                                                 })
                                             }

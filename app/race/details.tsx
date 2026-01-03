@@ -15,7 +15,7 @@ import {
     Divider,
     useTheme,
 } from "react-native-paper"
-import { useLocalSearchParams } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { LinearGradient } from "expo-linear-gradient"
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated"
 
@@ -55,7 +55,10 @@ const Details = () => {
 
     if (!race) return null
 
-    const isRegistered = race.participants?.some((p) => p.user_id === userId)
+    const isRegistered = race.participants?.some((p) => p.user?.id === userId)
+
+    const router = useRouter()
+    const canEnterRace = isRegistered && !!userId
 
     const getStatusConfig = () => {
         switch (race.status) {
@@ -639,6 +642,35 @@ const Details = () => {
                         </Text>
                     </LinearGradient>
                 </Pressable>
+
+                {canEnterRace && (
+                    <View
+                        style={{
+                            marginTop: 16,
+                        }}
+                    >
+                        <Pressable
+                            style={styles.registerButton}
+                            onPress={() =>
+                                router.push({
+                                    pathname: `/run/multi/live/[id]`,
+                                    params: { id: race.id },
+                                })
+                            }
+                        >
+                            <LinearGradient
+                                colors={["#16a34a", "#22c55e"]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.registerButtonGradient}
+                            >
+                                <Text style={styles.registerButtonText}>
+                                    GO TO RACE
+                                </Text>
+                            </LinearGradient>
+                        </Pressable>
+                    </View>
+                )}
             </View>
         </View>
     )
