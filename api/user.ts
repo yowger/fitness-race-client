@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useAuth } from "@/providers/AuthProvider"
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:4000/api"
+// const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://10.0.2.2:4000/api"
+const API_URL = "https://fitness-race-api.onrender.com"
 
 export function getUserApi(token?: string) {
     return axios.create({

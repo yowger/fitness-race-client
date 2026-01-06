@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 
-const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY
+// const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY
+const GEOAPIFY_API_KEY = "0ce4d4da2be740279d25b88593bf38dd"
 
 export const geoapifyApi = axios.create({
     baseURL: "https://api.geoapify.com/v1",

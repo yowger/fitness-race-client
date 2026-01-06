@@ -17,7 +17,8 @@ import { io, Socket } from "socket.io-client"
 
 // testing
 // const SERVER_URL = "http://10.0.2.2:4000"
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET as string
+// const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET as string
+const SOCKET_URL = "https://fitness-race-api.onrender.com"
 const SERVER_URL = SOCKET_URL
 
 let socket: Socket | null = null
