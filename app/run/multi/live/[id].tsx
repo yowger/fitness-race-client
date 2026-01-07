@@ -290,12 +290,14 @@ const Active = () => {
                         </PointAnnotation>
                     ))} */}
 
-                <Camera
-                    ref={cameraRef}
-                    zoomLevel={16}
-                    animationMode="flyTo"
-                    animationDuration={500}
-                />
+                {cameraRef.current && userLocation && (
+                    <Camera
+                        ref={cameraRef}
+                        zoomLevel={16}
+                        animationMode="flyTo"
+                        animationDuration={500}
+                    />
+                )}
 
                 {race?.routes?.geojson.features?.[0]?.geometry?.coordinates && (
                     <ShapeSource
