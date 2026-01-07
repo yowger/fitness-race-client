@@ -26,6 +26,7 @@ import { useAuth } from "@/providers/AuthProvider"
 import { useRoute } from "@/api/race"
 import { useProfile } from "@/api/user"
 import { useRace } from "@/api/races"
+import { Socket } from "socket.io-client"
 
 export type UserIdentity = {
     id: string
@@ -80,11 +81,12 @@ function calculatePace(speed: number): string {
 const { width } = Dimensions.get("window")
 
 const Active = () => {
+    const socketRef = useRef<Socket>(null)
     const { id: raceId } = useLocalSearchParams<{ id: string }>()
     const { data: user } = useProfile()
     const { data: race, isLoading, isError } = useRace(raceId!)
-    const routeId = race?.route_id
-    const { data: route } = useRoute(routeId!)
+    // const routeId = race?.route_id
+    // const { data: route } = useRoute(routeId!)
     const { session } = useAuth()
 
     const [participants, setParticipants] = useState<RaceUser[]>([])
@@ -146,26 +148,34 @@ const Active = () => {
     }, [race])
 
     useEffect(() => {
-        const socket = getSocket()
         if (!session || !raceId) return
 
-        socket.emit("joinRace", { raceId: raceId, userId: session?.user.id })
+        socketRef.current = getSocket()
 
-        socket.on("participantUpdate", (updatedParticipants: RaceUser[]) => {
-            setParticipants(updatedParticipants)
+        socketRef.current.emit("joinRace", {
+            raceId: raceId,
+            userId: session?.user.id,
         })
 
-        socket.on("notAllowed", () => {
+        socketRef.current.on(
+            "participantUpdate",
+            (updatedParticipants: RaceUser[]) => {
+                setParticipants(updatedParticipants)
+            }
+        )
+
+        socketRef.current.on("notAllowed", () => {
             alert("You are not allowed to join this race")
         })
 
         return () => {
-            socket.emit("leaveRace", {
-                raceId: raceId,
-                userId: session?.user.id,
-            })
-            socket.off("participantUpdate")
-            socket.off("notAllowed")
+            if (socketRef.current) {
+                socketRef.current.emit("leaveRace", {
+                    raceId: raceId,
+                    userId: session?.user.id,
+                })
+                socketRef.current.removeAllListeners()
+            }
         }
     }, [raceId, session])
 
@@ -205,17 +215,18 @@ const Active = () => {
                     prevCoordsRef.current = coords
                     setUserLocation(locUpdate)
 
-                    const socket = getSocket()
-                    socket.emit("participantUpdate", {
-                        userId: session?.user.id,
-                        raceId: raceId,
-                        coords: [
-                            locUpdate.coords.longitude,
-                            locUpdate.coords.latitude,
-                        ],
-                        timestamp: Date.now(),
-                        speed: locUpdate.coords.speed ?? 0,
-                    })
+                    if (socketRef.current?.connected) {
+                        socketRef.current.emit("participantUpdate", {
+                            userId: session.user.id,
+                            raceId,
+                            coords: [
+                                locUpdate.coords.longitude,
+                                locUpdate.coords.latitude,
+                            ],
+                            timestamp: Date.now(),
+                            speed: locUpdate.coords.speed ?? 0,
+                        })
+                    }
                 }
             )
         })()
@@ -286,7 +297,7 @@ const Active = () => {
                     animationDuration={500}
                 />
 
-                {route?.geojson.features?.[0]?.geometry?.coordinates && (
+                {race?.routes?.geojson.features?.[0]?.geometry?.coordinates && (
                     <ShapeSource
                         id="routeLine"
                         shape={{
@@ -294,7 +305,7 @@ const Active = () => {
                             geometry: {
                                 type: "LineString",
                                 coordinates:
-                                    route.geojson.features[0].geometry
+                                    race?.routes?.geojson.features[0].geometry
                                         .coordinates,
                             },
                             properties: {},
@@ -311,13 +322,13 @@ const Active = () => {
                     </ShapeSource>
                 )}
 
-                {route?.geojson.features?.[0]?.geometry?.coordinates
+                {race?.routes?.geojson.features?.[0]?.geometry?.coordinates
                     ?.length && (
                     <>
                         <PointAnnotation
                             id="start"
                             coordinate={
-                                route.geojson.features[0].geometry
+                                race?.routes?.geojson.features[0].geometry
                                     .coordinates[0]
                             }
                         >
@@ -329,8 +340,9 @@ const Active = () => {
                         <PointAnnotation
                             id="finish"
                             coordinate={
-                                route.geojson.features[0].geometry.coordinates[
-                                    route.geojson.features[0].geometry
+                                race?.routes?.geojson.features[0].geometry
+                                    .coordinates[
+                                    race?.routes?.geojson.features[0].geometry
                                         .coordinates.length - 1
                                 ]
                             }
@@ -538,7 +550,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        backdropFilter: "blur(10px)",
+        // backdropFilter: "blur(10px)",
     },
     raceName: {
         color: "#fff",
@@ -561,7 +573,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 20,
         zIndex: 5,
-        backdropFilter: "blur(10px)",
+        // backdropFilter: "blur(10px)",
     },
     primaryStat: {
         alignItems: "center",
