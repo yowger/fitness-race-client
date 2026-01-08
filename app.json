@@ -28,9 +28,9 @@
                 "INTERNET",
                 "ACCESS_COARSE_LOCATION",
                 "ACCESS_FINE_LOCATION",
+                "ACCESS_BACKGROUND_LOCATION",
                 "FOREGROUND_SERVICE",
-                "android.permission.ACCESS_COARSE_LOCATION",
-                "android.permission.ACCESS_FINE_LOCATION"
+                "POST_NOTIFICATIONS"
             ],
             "usesCleartextTraffic": true
         },
@@ -45,7 +45,8 @@
             [
                 "expo-location",
                 {
-                    "locationAlwaysAndWhenInUsePermission": "Allow app to access your location for better tracking accuracy."
+                    "locationAlwaysAndWhenInUsePermission": "Allow app to access your location for better tracking accuracy.",
+                    "locationWhenInUsePermission": "Allow app to access your location while in use."
                 }
             ],
             "expo-gradle-ext-vars"
