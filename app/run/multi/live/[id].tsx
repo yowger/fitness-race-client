@@ -17,7 +17,7 @@ import {
     Dimensions,
 } from "react-native"
 import React, { useEffect, useRef, useState } from "react"
-import { useLocalSearchParams } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import * as Location from "expo-location"
 
 import { getSocket } from "@/lib/socket"
@@ -88,6 +88,7 @@ const Active = () => {
     // const routeId = race?.route_id
     // const { data: route } = useRoute(routeId!)
     const { session } = useAuth()
+    const router = useRouter()
 
     const [participants, setParticipants] = useState<RaceUser[]>([])
     const [userLocation, setUserLocation] =

@@ -4,12 +4,23 @@ import {
     View,
     ActivityIndicator,
     TouchableOpacity,
+    Alert,
 } from "react-native"
 import React from "react"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useRace, useJoinRace, useLeaveRace } from "@/api/races"
 import { useAuth } from "@/providers/AuthProvider"
 import { SafeAreaView } from "react-native-safe-area-context"
+import * as Location from "expo-location"
+
+export async function canAccessLiveRace() {
+    const fg = await Location.getForegroundPermissionsAsync()
+
+    if (fg.status === "granted") return true
+
+    const req = await Location.requestForegroundPermissionsAsync()
+    return req.status === "granted"
+}
 
 const DetailsScreen = () => {
     const { id } = useLocalSearchParams<{ id: string }>()
@@ -38,7 +49,7 @@ const DetailsScreen = () => {
         )
     }
 
-    const isJoined = race.participants?.some((p) => p.user_id === userId)
+    const isJoined = race.participants?.some((p) => p.user?.id === userId)
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -110,19 +121,29 @@ const DetailsScreen = () => {
                     </Text>
                 </TouchableOpacity>
 
-                {/* {isJoined && ( */}
-                <TouchableOpacity
-                    style={[styles.button, styles.liveBtn]}
-                    onPress={() =>
-                        router.push({
-                            pathname: `/run/multi/live/[id]`,
-                            params: { id },
-                        })
-                    }
-                >
-                    <Text style={styles.buttonText}>Go to Live Race</Text>
-                </TouchableOpacity>
-                {/* )} */}
+                {isJoined && (
+                    <TouchableOpacity
+                        style={[styles.button, styles.liveBtn]}
+                        onPress={async () => {
+                            const ok = await canAccessLiveRace()
+
+                            if (!ok) {
+                                Alert.alert(
+                                    "Location Required",
+                                    "Enable location access to join the live race."
+                                )
+                                return
+                            }
+
+                            router.push({
+                                pathname: `/run/multi/live/[id]`,
+                                params: { id },
+                            })
+                        }}
+                    >
+                        <Text style={styles.buttonText}>Go to Live Race</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </SafeAreaView>
     )
