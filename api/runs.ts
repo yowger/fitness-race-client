@@ -17,7 +17,7 @@ export interface Race {
 
 // old one
 export async function fetchRuns(token?: string) {
-    const res = await runApi(token).get("/")
+    const res = await runApi(token).get("/runs")
     return res.data
 }
 
@@ -53,13 +53,14 @@ export interface CreateRunInput {
     time: number
     pace: string
     route: { latitude: number; longitude: number }[]
+    route_id?: string
     map_image?: string
     start_address?: string
     end_address?: string
 }
 
 export async function createRun(data: CreateRunInput, token?: string) {
-    const res = await runApi(token).post("/", data)
+    const res = await runApi(token).post("/runs", data)
     return res.data
 }
 

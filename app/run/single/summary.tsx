@@ -12,13 +12,13 @@ import {
 import { useLocalSearchParams, router } from "expo-router"
 import { Button, Surface } from "react-native-paper"
 import { useReverseGeocode } from "@/api/geoapify"
-import { useCreateRace } from "@/api/runs"
+import { useCreateRun } from "@/api/runs"
 import { LinearGradient } from "expo-linear-gradient"
 import MaterialIcons from "@react-native-vector-icons/material-icons"
 import Animated, { FadeInDown } from "react-native-reanimated"
 
 export default function RunSummary() {
-    const { mutate: createRace, isPending: isCreating } = useCreateRace()
+    const { mutate: createRun, isPending: isCreating } = useCreateRun()
 
     const { summary } = useLocalSearchParams()
     const data = summary ? JSON.parse(summary as string) : null
@@ -81,23 +81,37 @@ export default function RunSummary() {
         const finalName =
             name.trim() || `Run on ${new Date().toLocaleDateString()}`
 
-        createRace(
+        if (!data?.route || !data?.distance || !data?.time) {
+            Alert.alert("Invalid run data", "Missing run information.")
+            return
+        }
+
+        createRun(
             {
-                name:
-                    name.trim() || `Race on ${new Date().toLocaleDateString()}`,
+                name: finalName,
+                distance: data.distance,
+                time: data.time,
+                pace: data.pace,
+                route: data.route,
+                map_image: data.map_image,
                 route_id: data.route_id,
-                start_time: data.start_time,
-                end_time: data.end_time,
-                description: "Auto-created from personal run",
+                start_address: startLabel,
+                end_address: endLabel,
             },
             {
-                onSuccess: (race) => {
-                    Alert.alert("Race Created", `Race "${race.name}" created!`)
-                    router.push(`/run/single`)
+                onSuccess: () => {
+                    Alert.alert(
+                        "Run Saved",
+                        "Your run has been saved successfully."
+                    )
+                    router.replace("/(tabs)/races")
                 },
                 onError: (err: any) => {
-                    console.log("🚀 createRace error:", err)
-                    Alert.alert("Error creating race", err.message)
+                    console.error("❌ createRun error:", err)
+                    Alert.alert(
+                        "Error saving run",
+                        err?.message || "Something went wrong"
+                    )
                 },
             }
         )

@@ -199,14 +199,15 @@ export default function LiveRun() {
         }
 
         const summaryData = {
+            name: plannedRoute?.name ?? "My Run",
             distance,
             time,
             pace: calculatePace(time, distance),
             route,
-            mapImage: savedUri,
+            map_image: savedUri ?? undefined,
             route_id: plannedRoute?.id,
-            start_time: runStartTime,
-            end_time: runEndTime,
+            start_address: plannedRoute?.start_address,
+            end_address: plannedRoute?.end_address,
         }
 
         router.push({
