@@ -31,6 +31,15 @@ export interface Run {
     routes?: RouteInfo // joined route info
 }
 
+export interface RunStats {
+    totalRuns: number
+    totalDistance: number
+    totalTime: number
+    averagePace: string | null
+    longestRun: Run | null
+    recentRuns: Run[]
+}
+
 // old one
 export async function fetchRuns(token?: string) {
     const res = await runApi(token).get("/runs")
@@ -48,7 +57,7 @@ export function useRuns() {
 }
 
 export async function fetchRunById(id: string, token?: string) {
-    const res = await runApi(token).get(`/${id}`)
+    const res = await runApi(token).get(`/runs/${id}`)
     return res.data as Run
 }
 
@@ -124,6 +133,23 @@ export function useHealth() {
         queryKey: ["health"],
         queryFn: () => fetchHealth(token),
         staleTime: 5 * 1000,
+        refetchOnWindowFocus: false,
+    })
+}
+
+export async function fetchRunStats(token?: string) {
+    const res = await runApi(token).get("/runs/stats")
+    return res.data as RunStats
+}
+
+export function useRunStats() {
+    const { session } = useAuth()
+    const token = session?.access_token
+
+    return useQuery({
+        queryKey: ["runStats"],
+        queryFn: () => fetchRunStats(token),
+        staleTime: 60 * 1000, // cache for 1 min
         refetchOnWindowFocus: false,
     })
 }
