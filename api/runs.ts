@@ -3,22 +3,38 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/providers/AuthProvider"
 import { runApi } from "@/lib/axios"
 
-export interface Race {
+export interface RunPoint {
+    latitude: number
+    longitude: number
+}
+
+export interface RouteInfo {
     id: string
     name: string
-    price?: number
-    description?: string
-    banner_url?: string
-    start_time: string
-    end_time?: string
+    distance?: number
+    geojson?: any
+}
+
+export interface Run {
+    id: string
+    name: string
+    distance: number
+    time: number
+    pace: string
+    route: RunPoint[]
+    map_image?: string
+    start_address?: string
+    end_address?: string
     route_id?: string
     created_by?: string
+    created_at: string
+    routes?: RouteInfo // joined route info
 }
 
 // old one
 export async function fetchRuns(token?: string) {
     const res = await runApi(token).get("/runs")
-    return res.data
+    return res.data as Run[]
 }
 
 export function useRuns() {
@@ -33,7 +49,7 @@ export function useRuns() {
 
 export async function fetchRunById(id: string, token?: string) {
     const res = await runApi(token).get(`/${id}`)
-    return res.data
+    return res.data as Run
 }
 
 export function useRun(id?: string) {
@@ -61,7 +77,7 @@ export interface CreateRunInput {
 
 export async function createRun(data: CreateRunInput, token?: string) {
     const res = await runApi(token).post("/runs", data)
-    return res.data
+    return res.data as Run
 }
 
 export function useCreateRun() {

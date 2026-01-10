@@ -1,10 +1,21 @@
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native"
+import {
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity,
+    FlatList,
+} from "react-native"
 import React from "react"
 import { useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { useRuns, Run } from "@/api/runs"
 
 export default function SoloTab() {
+    const { data: runs, isLoading } = useRuns()
     const router = useRouter()
+
+    // Show only the last 3 runs
+    const lastRuns = runs?.slice(0, 3) ?? []
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -23,8 +34,29 @@ export default function SoloTab() {
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerTitle}>Last Run</Text>
-                    <Text style={styles.footerText}>No runs yet</Text>
+                    <Text style={styles.footerTitle}>Recent Runs</Text>
+
+                    {isLoading ? (
+                        <Text style={styles.footerText}>Loading...</Text>
+                    ) : lastRuns.length === 0 ? (
+                        <Text style={styles.footerText}>No runs yet</Text>
+                    ) : (
+                        <FlatList
+                            data={lastRuns}
+                            keyExtractor={(item: Run) => item.id}
+                            renderItem={({ item }) => (
+                                <View style={styles.runItem}>
+                                    <Text style={styles.runName}>
+                                        {item.name}
+                                    </Text>
+                                    <Text style={styles.runStats}>
+                                        {item.distance.toFixed(2)} km •{" "}
+                                        {item.time} sec • {item.pace}
+                                    </Text>
+                                </View>
+                            )}
+                        />
+                    )}
                 </View>
             </View>
         </SafeAreaView>
@@ -34,13 +66,14 @@ export default function SoloTab() {
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
-        backgroundColor: "#0F172A", // dark, sporty
+        backgroundColor: "#0F172A",
     },
     container: {
         flex: 1,
         justifyContent: "space-between",
         alignItems: "center",
         paddingVertical: 40,
+        width: "100%",
     },
     header: {
         alignItems: "center",
@@ -76,16 +109,30 @@ const styles = StyleSheet.create({
     },
 
     footer: {
-        alignItems: "center",
+        width: "90%",
+        alignItems: "flex-start",
     },
     footerTitle: {
         fontSize: 14,
         color: "#94A3B8",
+        marginBottom: 8,
     },
     footerText: {
         fontSize: 16,
         fontWeight: "600",
         color: "#E5E7EB",
         marginTop: 4,
+    },
+    runItem: {
+        marginBottom: 6,
+    },
+    runName: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#FFF",
+    },
+    runStats: {
+        fontSize: 14,
+        color: "#94A3B8",
     },
 })
