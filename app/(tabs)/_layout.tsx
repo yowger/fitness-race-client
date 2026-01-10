@@ -36,6 +36,21 @@ export default function TabsLayout() {
                     ),
                 }}
             />
+
+            <Tabs.Screen
+                name="solo/index"
+                options={{
+                    title: "Solo",
+                    tabBarIcon: ({ size, color }) => (
+                        <MaterialIcons
+                            name="directions-run"
+                            size={size}
+                            color={color}
+                        />
+                    ),
+                }}
+            />
+
             <Tabs.Screen
                 name="profile/index"
                 options={{

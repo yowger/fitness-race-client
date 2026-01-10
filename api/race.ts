@@ -38,6 +38,8 @@ export interface RouteResponse {
     description?: string
     distance?: number
     geojson: FeatureCollection<LineString>
+    start_address?: string
+    end_address?: string
     map_url?: string
     created_by?: string
     created_at?: string

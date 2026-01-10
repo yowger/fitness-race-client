@@ -3,6 +3,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/providers/AuthProvider"
 import { runApi } from "@/lib/axios"
 
+export interface Race {
+    id: string
+    name: string
+    price?: number
+    description?: string
+    banner_url?: string
+    start_time: string
+    end_time?: string
+    route_id?: string
+    created_by?: string
+}
+
+// old one
 export async function fetchRuns(token?: string) {
     const res = await runApi(token).get("/")
     return res.data
@@ -28,7 +41,7 @@ export function useRun(id?: string) {
     const token = session?.access_token
 
     return useQuery({
-        queryKey: ["run", id],
+        queryKey: ["runs", id],
         queryFn: () => fetchRunById(id!, token),
         enabled: !!id,
     })
