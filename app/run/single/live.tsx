@@ -250,6 +250,22 @@ export default function LiveRun() {
                     mapStyle={MAP_STYLE_URL}
                 >
                     {/* Your route line */}
+
+                    {/* Planned route line */}
+                    {plannedGeoJson && (
+                        <ShapeSource id="plannedRoute" shape={plannedGeoJson}>
+                            <LineLayer
+                                id="plannedRouteLine"
+                                style={{
+                                    lineColor: "#16a34a",
+                                    lineWidth: 4,
+                                    lineCap: "round",
+                                    lineJoin: "round",
+                                }}
+                            />
+                        </ShapeSource>
+                    )}
+
                     {route.length > 1 && (
                         <ShapeSource
                             id="route"
@@ -270,21 +286,6 @@ export default function LiveRun() {
                                 style={{
                                     lineColor: "#0891b2",
                                     lineWidth: 5,
-                                    lineCap: "round",
-                                    lineJoin: "round",
-                                }}
-                            />
-                        </ShapeSource>
-                    )}
-
-                    {/* Planned route line */}
-                    {plannedGeoJson && (
-                        <ShapeSource id="plannedRoute" shape={plannedGeoJson}>
-                            <LineLayer
-                                id="plannedRouteLine"
-                                style={{
-                                    lineColor: "#16a34a",
-                                    lineWidth: 4,
                                     lineCap: "round",
                                     lineJoin: "round",
                                 }}

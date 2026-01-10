@@ -10,7 +10,11 @@ import { useRouter } from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { LinearGradient } from "expo-linear-gradient"
 import MaterialIcons from "@react-native-vector-icons/material-icons"
-import Animated, { FadeInDown, FadeInUp, FadeInLeft } from "react-native-reanimated"
+import Animated, {
+    FadeInDown,
+    FadeInUp,
+    FadeInLeft,
+} from "react-native-reanimated"
 import { useRuns, Run } from "@/api/runs"
 import { useRunStats } from "@/api/runs"
 
@@ -90,7 +94,9 @@ export default function SoloTab() {
                             <View style={styles.heroStatDivider} />
                             <View style={styles.heroStat}>
                                 <Text style={styles.heroStatValue}>
-                                    {stats ? Math.floor(stats.totalTime / 60) : 0}
+                                    {stats
+                                        ? Math.floor(stats.totalTime / 60)
+                                        : 0}
                                 </Text>
                                 <Text style={styles.heroStatLabel}>Min</Text>
                             </View>
@@ -181,7 +187,10 @@ export default function SoloTab() {
                                             Longest Run
                                         </Text>
                                         <Text style={styles.secondaryStatValue}>
-                                            {stats.longestRun.distance.toFixed(2)} km
+                                            {stats.longestRun.distance.toFixed(
+                                                2
+                                            )}{" "}
+                                            km
                                         </Text>
                                     </View>
                                 </View>
@@ -259,12 +268,16 @@ export default function SoloTab() {
                             {lastRuns.map((item, index) => (
                                 <Animated.View
                                     key={item.id}
-                                    entering={FadeInLeft.delay(500 + index * 100)}
+                                    entering={FadeInLeft.delay(
+                                        500 + index * 100
+                                    )}
                                 >
                                     <TouchableOpacity
                                         style={styles.runItem}
                                         onPress={() =>
-                                            router.push(`/run/single/${item.id}`)
+                                            router.push(
+                                                `/run/single/${item.id}`
+                                            )
                                         }
                                         activeOpacity={0.7}
                                     >
@@ -289,41 +302,72 @@ export default function SoloTab() {
                                                 {item.name}
                                             </Text>
                                             <View style={styles.runStats}>
-                                                <View style={styles.runStatItem}>
+                                                <View
+                                                    style={styles.runStatItem}
+                                                >
                                                     <MaterialIcons
                                                         name="straighten"
                                                         size={14}
                                                         color="#6B7280"
                                                     />
-                                                    <Text style={styles.runStatText}>
-                                                        {item.distance.toFixed(2)} km
+                                                    <Text
+                                                        style={
+                                                            styles.runStatText
+                                                        }
+                                                    >
+                                                        {item.distance.toFixed(
+                                                            2
+                                                        )}{" "}
+                                                        km
                                                     </Text>
                                                 </View>
-                                                <View style={styles.runStatDivider} />
-                                                <View style={styles.runStatItem}>
+                                                <View
+                                                    style={
+                                                        styles.runStatDivider
+                                                    }
+                                                />
+                                                <View
+                                                    style={styles.runStatItem}
+                                                >
                                                     <MaterialIcons
                                                         name="schedule"
                                                         size={14}
                                                         color="#6B7280"
                                                     />
-                                                    <Text style={styles.runStatText}>
+                                                    <Text
+                                                        style={
+                                                            styles.runStatText
+                                                        }
+                                                    >
                                                         {formatTime(item.time)}
                                                     </Text>
                                                 </View>
-                                                <View style={styles.runStatDivider} />
-                                                <View style={styles.runStatItem}>
+                                                <View
+                                                    style={
+                                                        styles.runStatDivider
+                                                    }
+                                                />
+                                                <View
+                                                    style={styles.runStatItem}
+                                                >
                                                     <MaterialIcons
                                                         name="speed"
                                                         size={14}
                                                         color="#6B7280"
                                                     />
-                                                    <Text style={styles.runStatText}>
+                                                    <Text
+                                                        style={
+                                                            styles.runStatText
+                                                        }
+                                                    >
                                                         {item.pace}
                                                     </Text>
                                                 </View>
                                             </View>
                                             <Text style={styles.runDate}>
-                                                {new Date(item.created_at).toLocaleDateString("en-US", {
+                                                {new Date(
+                                                    item.created_at
+                                                ).toLocaleDateString("en-US", {
                                                     month: "short",
                                                     day: "numeric",
                                                     year: "numeric",
@@ -380,7 +424,7 @@ function formatTime(seconds: number) {
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: "#F9FAFB" },
     scrollContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
-    
+
     // Header
     header: {
         backgroundColor: "#FFFFFF",
@@ -415,8 +459,8 @@ const styles = StyleSheet.create({
     heroCard: {
         marginBottom: 24,
         borderRadius: 20,
-        overflow: 'hidden',
-        shadowColor: '#000',
+        overflow: "hidden",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 16,
@@ -426,41 +470,41 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     heroStatsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
+        flexDirection: "row",
+        justifyContent: "space-around",
         marginBottom: 24,
         paddingBottom: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+        borderBottomColor: "rgba(255, 255, 255, 0.2)",
     },
     heroStat: {
-        alignItems: 'center',
+        alignItems: "center",
     },
     heroStatValue: {
         fontSize: 28,
-        fontWeight: '900',
-        color: '#FFF',
+        fontWeight: "900",
+        color: "#FFF",
         marginBottom: 4,
     },
     heroStatLabel: {
         fontSize: 11,
-        fontWeight: '700',
-        color: 'rgba(255, 255, 255, 0.8)',
-        textTransform: 'uppercase',
+        fontWeight: "700",
+        color: "rgba(255, 255, 255, 0.8)",
+        textTransform: "uppercase",
         letterSpacing: 0.5,
     },
     heroStatDivider: {
         width: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
     },
     heroButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
         borderRadius: 16,
-        overflow: 'hidden',
+        overflow: "hidden",
     },
     heroButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         padding: 20,
         gap: 16,
     },
@@ -468,24 +512,24 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#E0F2FE',
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: "#E0F2FE",
+        alignItems: "center",
+        justifyContent: "center",
     },
     heroTextContainer: {
         flex: 1,
     },
     heroButtonText: {
         fontSize: 20,
-        fontWeight: '900',
-        color: '#111827',
+        fontWeight: "900",
+        color: "#111827",
         marginBottom: 4,
         letterSpacing: -0.3,
     },
     heroButtonSubtext: {
         fontSize: 13,
-        color: '#6B7280',
-        fontWeight: '600',
+        color: "#6B7280",
+        fontWeight: "600",
     },
 
     // Section Headers

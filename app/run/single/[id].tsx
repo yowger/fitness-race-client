@@ -26,6 +26,7 @@ import {
 import { useRun, useDeleteRun } from "@/api/runs"
 import { MAP_STYLE_URL } from "@/config/map"
 import { useLocalSearchParams, useRouter } from "expo-router"
+import { useRoute } from "@/api/race"
 
 const { width, height } = Dimensions.get("window")
 
@@ -33,9 +34,18 @@ export default function RunDetail() {
     const { id } = useLocalSearchParams<{ id: string }>()
     const router = useRouter()
     const { data: run, isLoading, error } = useRun(id)
+    const { data: routeData, isLoading: isRouteLoading } = useRoute(
+        run?.route_id || ""
+    )
     const { mutate: deleteRun, isPending: isDeleting } = useDeleteRun()
     const mapRef = useRef<MapViewRef>(null)
     const cameraRef = useRef<CameraRef>(null)
+
+    let plannedRoutes: [number, number][] = []
+
+    if (routeData) {
+        plannedRoutes = routeData.geojson.features[0].geometry.coordinates
+    }
 
     const handleDelete = () => {
         Alert.alert("Delete Run?", "This action cannot be undone.", [
@@ -374,6 +384,30 @@ export default function RunDetail() {
                                             circleRadius: 10,
                                             circleStrokeWidth: 3,
                                             circleStrokeColor: "#fff",
+                                        }}
+                                    />
+                                </ShapeSource>
+                            )}
+
+                            {plannedRoutes.length > 1 && (
+                                <ShapeSource
+                                    id="route"
+                                    shape={{
+                                        type: "Feature",
+                                        geometry: {
+                                            type: "LineString",
+                                            coordinates: routeCoordinates,
+                                        },
+                                        properties: {},
+                                    }}
+                                >
+                                    <LineLayer
+                                        id="routeLine"
+                                        style={{
+                                            lineColor: "#0891b2",
+                                            lineWidth: 5,
+                                            lineCap: "round",
+                                            lineJoin: "round",
                                         }}
                                     />
                                 </ShapeSource>
